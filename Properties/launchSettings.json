@@ -1,0 +1,40 @@
+{
+  "profiles": {
+    "dmap2tiled": {
+      "commandName": "Project",
+      "commandLineArgs": "dmap2tiled --project C:\\Temp\\Bossnest01 --client \"C:\\Program Files (x86)\\Conquer Online\\Conquer Online 3.0\" --dmap map\\map\\bossnest01_new.7z"
+    },
+    "preview": {
+      "commandName": "Project",
+      "commandLineArgs": "preview \"D:\\Programming\\Conquer\\Clients\\CrazyTao\""
+    },
+    "tiled2dmap": {
+      "commandName": "Project",
+      "commandLineArgs": "tiled2dmap --project C:\\Temp\\Bossnest01 --map-name Bossnest_pk1"
+    },
+    "test parse": {
+      "commandName": "Project",
+      "commandLineArgs": "test-parse-dmap \"D:\\Programming\\Conquer\\Clients\\5579\""
+    },
+    "extract": {
+      "commandName": "Project",
+      "commandLineArgs": "extract \"C:\\Temp\" \"map/map/arena.zmap\" \"S:\\Program Files (x86)\\NetDragon\\Eudemons Online\" \"euArena\""
+    },
+    "install": {
+      "commandName": "Project",
+      "commandLineArgs": "install \"C:\\Temp\\euArena\" 11001 \"D:\\Programming\\Conquer\\Clients\\6216\""
+    },
+    "test-parse-scene": {
+      "commandName": "Project",
+      "commandLineArgs": "test-parse-scene --client \"D:\\Programming\\Conquer\\Clients\\5579\""
+    },
+    "deserialize": {
+      "commandName": "Project",
+      "commandLineArgs": "deserialize \"C:\\Temp\\Serialize\\arena.json\" \"C:\\Temp\\Serialize\""
+    },
+    "serialize": {
+      "commandName": "Project",
+      "commandLineArgs": "serialize \"C:\\Temp\\Serialize\\canyon.DMap\" \"C:\\Temp\\Serialize\" -x"
+    }
+  }
+}

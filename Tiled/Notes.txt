@@ -1,0 +1,26 @@
+﻿Dmap Objects to handle
+
++Terrain/Scene
+--Has a tile position and pizel offset. Should be on terrain/scene layer
+--Affects accsesibility and should be incorporated into the access layers.
+
++Cover = 0x04
+--Object layer
+---need to convert known tile position + offset.
+---Might affect accessability - does not.
+
++Puzzle = 0x08,
+--Tile Map
+---should be own TiledMapFile 
+
++Effect = 0x0A,
+--Object layer
+---need to convert known tile position
+
++Sound = 0x0F
+--Object layer
+---Uses pixel position
+
++Portals
+--Object Layer
+---need to con45vert known tile position
