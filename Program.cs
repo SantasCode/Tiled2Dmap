@@ -111,12 +111,21 @@ namespace Tiled2Dmap.CLI
             [Option(Description ="Directory of Project")][DirectoryExists] string project, 
             [Option("client", Description = "Directory of client resources")][DirectoryExists] string clientPath,
             [Option("dmap", Description ="Path to Dmap File")] string dmapPath,
-            [Option('s', Description ="Saves the stiched together map background")] bool saveBackground = false
+            [Option('s', Description ="Saves the stiched together map background")] bool saveBackground = false,
+            [Option('f', Description = "Force converts a map, even with unsupported features.")] bool forceConvert = false
             )
         {
             Console.WriteLine($"Called dmap2tiled --project {project} --client {clientPath} --dmap {dmapPath}, -s {saveBackground}");
             Utility.ClientResources clientResources = new(clientPath);
             var dmap = new DmapFile(dmapPath, clientPath);
+
+            if(!forceConvert && (dmap.TerrainScenes.Count > 0 || dmap.Puzzles.Count > 0))
+            {
+                Console.WriteLine("Unsupported map features detected in this map. The result will not be a complete representation of the map");
+                Console.WriteLine("To force convert the map, use option `f`");
+                return;
+            }
+            
             Tiled.TiledProject.FromDmap(project, clientResources, dmap);
         }
         [Command("tiled2dmap")]

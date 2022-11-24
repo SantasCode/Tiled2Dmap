@@ -29,6 +29,7 @@ Options:
   * `--client <String>`        Directory of client resources (Required)
   * `--dmap <String>`          Path to Dmap File (Required)
   * `-s, --save-background`    Saves the stiched together map background
+  * `-f, --force-convert`      Forces the conversion, even with unsupported map features
   * `-h, --help`               Show help message
   
 #### tiled2dmap
