@@ -122,7 +122,7 @@ namespace Tiled2Dmap.CLI
             if(!forceConvert && (dmap.TerrainScenes.Count > 0 || dmap.Puzzles.Count > 0))
             {
                 Console.WriteLine("Unsupported map features detected in this map. The result will not be a complete representation of the map");
-                Console.WriteLine("To force convert the map, use option `f`");
+                Console.WriteLine("To force convert the map, use option `-f`");
                 return;
             }
             

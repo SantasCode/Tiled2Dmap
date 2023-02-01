@@ -369,7 +369,9 @@ namespace Tiled2Dmap.CLI.Dmap
             jsOptions.Converters.Add(new Tiled.Json.TiledObjectConverter());
             jsOptions.Converters.Add(new Tiled.Json.TileConverter());
             #endregion Setup Json Options
+
             TiledMapFile mainMap = JsonSerializer.Deserialize<TiledMapFile>(File.ReadAllText(Path.Combine(TiledDirectory, "map_main.json")), jsOptions);
+
             TileLayer puzzleLayer = (TileLayer)mainMap.GetLayer("background");
             bool sizeSet = false;
             Size extendedBackgroundSize = new(0, 0);

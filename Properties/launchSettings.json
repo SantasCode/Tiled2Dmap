@@ -2,7 +2,7 @@
   "profiles": {
     "dmap2tiled": {
       "commandName": "Project",
-      "commandLineArgs": "dmap2tiled --project C:\\Temp\\Bossnest01 --client \"C:\\Program Files (x86)\\Conquer Online\\Conquer Online 3.0\" --dmap map\\map\\bossnest01_new.7z"
+      "commandLineArgs": "dmap2tiled --project C:\\Temp\\comaps --client \"D:\\Games\\Conquer\\ConquerFuse\" --dmap map\\map\\occupy03.dmap"
     },
     "preview": {
       "commandName": "Project",

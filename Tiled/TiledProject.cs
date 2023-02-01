@@ -7,6 +7,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.IO;
 using System.Drawing;
+using Tiled2Dmap.CLI.Dmap;
+using Tiled2Dmap.CLI.ImageHelp;
 
 namespace Tiled2Dmap.CLI.Tiled
 {
@@ -202,28 +204,38 @@ namespace Tiled2Dmap.CLI.Tiled
             //Create and slice up the background images.
             tiledProject.AddDirectory(Path.Combine(tiledProject.ProjectDirectory, "tiled", "background"));
 
-            TileSetFile backgroundTileSet;
-            TileLayer backgroundTileLayer;
-            (backgroundTileSet, backgroundTileLayer) = TileSetFile.TileSetFromPuzzleFile("background", ClientResources, tiledProject.ProjectDirectory, DmapFile.PuzzleFile, DmapFile.SizeTiles);
+            //Stitch up the puzzle file.
+            PuzzleFile backgroundPuzzle = new PuzzleFile(ClientResources.ClientDirectory, DmapFile.PuzzleFile);
 
-            string backgroundtileSetPath = $"{Path.Combine(tiledProject.ProjectDirectory, "tiled")}/{backgroundTileSet.Name}.json";
-            File.WriteAllText(backgroundtileSetPath, JsonSerializer.Serialize(backgroundTileSet, jsOptions));
+            IsometricSliceResult bgSliceResults = new();
+
+            using (ImageServices.Stitch imageStitch = new(ClientResources, backgroundPuzzle))
+            {
+                CordConverter cordConverter = new(new Size((int)DmapFile.SizeTiles.Width, (int)DmapFile.SizeTiles.Height), imageStitch.Image.Size);
+                IsometricSlice isometricSlicer = new(ConsoleAppLogger.CreateLogger<IsometricSlice>(), "background", ProjectDirectory, imageStitch.Image, cordConverter);
+                bgSliceResults = isometricSlicer.Slice();
+            }
+
+            //(backgroundTileSet, backgroundTileLayer) = TileSetFile.TileSetFromPuzzleFile("background", ClientResources, tiledProject.ProjectDirectory, DmapFile.PuzzleFile, DmapFile.SizeTiles);
+
+            string backgroundtileSetPath = $"{Path.Combine(tiledProject.ProjectDirectory, "tiled")}/{bgSliceResults.TileSetFile.Name}.json";
+            File.WriteAllText(backgroundtileSetPath, JsonSerializer.Serialize(bgSliceResults.TileSetFile, jsOptions));
 
             TiledMapFile mainMapFile = new()
             {
-                WidthTiles = backgroundTileLayer.WidthTiles,
-                HeightTiles = backgroundTileLayer.HeightTiles,
-                TileWidth = Constants.TiledTileWidth,
-                TileHeight = Constants.TiledTileHeight,
+                WidthTiles = bgSliceResults.TileLayer.WidthTiles,
+                HeightTiles = bgSliceResults.TileLayer.HeightTiles,
+                TileWidth = bgSliceResults.TileWidth,
+                TileHeight = bgSliceResults.TileHeight
             };
 
-            mainMapFile.Layers.Add(backgroundTileLayer);
+            mainMapFile.Layers.Add(bgSliceResults.TileLayer);
             mainMapFile.TileSets.Add(new()
             {
                 FirstGId = NextGlobalTileId,
                 Source = Path.GetRelativePath(Path.Combine(tiledProject.ProjectDirectory, "tiled"), backgroundtileSetPath)
             });
-            NextGlobalTileId += backgroundTileSet.TileCount;
+            NextGlobalTileId += bgSliceResults.TileSetFile.TileCount;
             #endregion Background
 
             #region Portals

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Tiled2Dmap.CLI.Dmap
 {
-    public class CoordConverter
+    public class CordConverter
     {
         /// <summary>
         /// Size in umber of tiles
@@ -14,7 +14,7 @@ namespace Tiled2Dmap.CLI.Dmap
 
         public Size backgroundSize;
 
-        public CoordConverter(Size dmapSize, Size backgroundSize)
+        public CordConverter(Size dmapSize, Size backgroundSize)
         {
             this.dmapSize = dmapSize;
             this.backgroundSize = backgroundSize;

@@ -54,7 +54,7 @@ namespace Tiled2Dmap.CLI.Preview.Render
             #endregion Background
 
             //Create a coordinate converter to help place objects within puzzle coordinate space.
-            CoordConverter coordConverter = new(new System.Drawing.Size((int)dmapFile.SizeTiles.Width, (int)dmapFile.SizeTiles.Height), 
+            CordConverter coordConverter = new(new System.Drawing.Size((int)dmapFile.SizeTiles.Width, (int)dmapFile.SizeTiles.Height), 
                 new System.Drawing.Size((int)puzzleFile.Size.Width * puzzleFile.GetWidth(), (int)puzzleFile.Size.Height * puzzleFile.GetWidth()));
 
 
