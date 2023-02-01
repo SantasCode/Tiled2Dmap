@@ -38,26 +38,43 @@ namespace Tiled2Dmap.CLI.Tiled
 
         public TiledTile GetTile(string TiledDirectory, int TileId, JsonSerializerOptions JSONOptions)
         {
-            //Select the correct tileset based on GId and tileset ffirst gid.
-            InternalTileSet intTileSet = null;
-            foreach(var tileset in TileSets.OrderBy(p=> p.FirstGId))
-            {
-                if (TileId >= tileset.FirstGId)
-                    intTileSet = tileset;
-                else
-                    break;
-            }
+            InternalTileSet intTileSet = getInternalTileSet(TileId);
+            TileSetFile tileSetFile = getTileSet(TiledDirectory, TileId, JSONOptions);
+
+            TileId -= intTileSet.FirstGId;
+
+
+            return tileSetFile.Tiles[TileId];
+        }
+
+        public Size GetTileSize(string TiledDirectory, int TileId, JsonSerializerOptions JSONOptions)
+        {
+            var tileSet = getTileSet(TiledDirectory, TileId, JSONOptions);
+            return new Size(tileSet.TileWidth, tileSet.TileHeight);
+        }
+
+        private TileSetFile getTileSet(string TiledDirectory, int TileId, JsonSerializerOptions JSONOptions)
+        {
+            InternalTileSet intTileSet = getInternalTileSet(TileId);
             TileSetFile tileSetFile = null;
             if (!_TileSetFiles.TryGetValue(intTileSet.Source, out tileSetFile))
             {
                 tileSetFile = JsonSerializer.Deserialize<TileSetFile>(File.ReadAllText(Path.Combine(TiledDirectory, intTileSet.Source)), JSONOptions);
                 _TileSetFiles.Add(intTileSet.Source, tileSetFile);
             }
-
-            TileId -= intTileSet.FirstGId;
-
-
-            return tileSetFile.Tiles[TileId];
+            return tileSetFile;
+        }
+        private InternalTileSet getInternalTileSet(int TileId) 
+        {
+            InternalTileSet intTileSet = null;
+            foreach (var tileset in TileSets.OrderBy(p => p.FirstGId))
+            {
+                if (TileId >= tileset.FirstGId)
+                    intTileSet = tileset;
+                else
+                    break;
+            }
+            return intTileSet;
         }
         public TiledLayer GetLayer(string Name)
         {

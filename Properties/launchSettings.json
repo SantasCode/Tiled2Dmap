@@ -10,7 +10,7 @@
     },
     "tiled2dmap": {
       "commandName": "Project",
-      "commandLineArgs": "tiled2dmap --project C:\\Temp\\Bossnest01 --map-name Bossnest_pk1"
+      "commandLineArgs": "tiled2dmap --project C:\\Temp\\comaps --map-name occupy03_test"
     },
     "test parse": {
       "commandName": "Project",

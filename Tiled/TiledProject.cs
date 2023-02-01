@@ -216,7 +216,7 @@ namespace Tiled2Dmap.CLI.Tiled
                 bgSliceResults = isometricSlicer.Slice();
             }
 
-            //(backgroundTileSet, backgroundTileLayer) = TileSetFile.TileSetFromPuzzleFile("background", ClientResources, tiledProject.ProjectDirectory, DmapFile.PuzzleFile, DmapFile.SizeTiles);
+            //(backgroundTileSet, backgroundTileLayer) = TileSetFile.TileSetFromPuzzleFile("background", ClientResources, tiledProject._projectDirectory, DmapFile.PuzzleFile, DmapFile.SizeTiles);
 
             string backgroundtileSetPath = $"{Path.Combine(tiledProject.ProjectDirectory, "tiled")}/{bgSliceResults.TileSetFile.Name}.json";
             File.WriteAllText(backgroundtileSetPath, JsonSerializer.Serialize(bgSliceResults.TileSetFile, jsOptions));

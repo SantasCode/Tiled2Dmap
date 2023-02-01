@@ -135,7 +135,7 @@ namespace Tiled2Dmap.CLI
             )
         {
             Console.WriteLine($"Called tiled2dmap --project {project} --map-name {MapName}");
-            DmapProject dmapProject = new(project, MapName);
+            DmapProject dmapProject = new(ConsoleAppLogger.CreateLogger<DmapProject>(), project, MapName);
             dmapProject.AssembleDmap();
             dmapProject.AssemblePuzzle();
         }

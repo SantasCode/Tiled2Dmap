@@ -10,26 +10,33 @@ using System.Text.Json.Serialization;
 using System.Drawing;
 using System.Security.Cryptography;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using Tiled2Dmap.CLI.Utility;
 
 namespace Tiled2Dmap.CLI.Dmap
 {
     public class DmapProject
     {
-        public string DmapDirectory { get { return Path.Combine(ProjectDirectory, "dmap"); } }
-        public string TiledDirectory { get { return Path.Combine(ProjectDirectory, "tiled"); } }
+        private readonly ILogger _logger;
+        public string DmapDirectory { get { return Path.Combine(_projectDirectory, "dmap"); } }
+        public string TiledDirectory { get { return Path.Combine(_projectDirectory, "tiled"); } }
 
         public DmapFile DmapFile { get; private set; }
 
-        private string ProjectDirectory;
-        private string ProjectName;
-        private string MapName;
-        public DmapProject(string ProjectDirectory, string MapName = "")
+        private readonly string _projectDirectory;
+        private readonly string _projectName;
+        private readonly string _mapName;
+        public DmapProject(ILogger<DmapProject> logger, string ProjectDirectory, string MapName = "")
         {
-            this.ProjectDirectory = ProjectDirectory;
-            this.ProjectName = new DirectoryInfo(ProjectDirectory).Name;
+            _logger = logger;
+
+            this._projectDirectory = ProjectDirectory;
+            this._projectName = new DirectoryInfo(ProjectDirectory).Name;
+
             if (MapName == "") 
-                MapName = this.ProjectName;
-            this.MapName = MapName;
+                MapName = this._projectName;
+
+            this._mapName = MapName;
 
         }
 
@@ -52,9 +59,9 @@ namespace Tiled2Dmap.CLI.Dmap
 
             DmapFile = new()
             {
-                DmapPath = $"map/map/{MapName}.dmap",
+                DmapPath = $"map/map/{_mapName}.dmap",
                 Header = ASCIIEncoding.ASCII.GetBytes("CUSTOM01"),
-                PuzzleFile = $"map/puzzle/{MapName}.pul"
+                PuzzleFile = $"map/puzzle/{_mapName}.pul"
             };
             TiledMapFile accessMap = JsonSerializer.Deserialize<TiledMapFile>(File.ReadAllText(Path.Combine(TiledDirectory, "map_access.json")), jsOptions);
             DmapFile.SizeTiles = new((uint)accessMap.WidthTiles, (uint)accessMap.HeightTiles);
@@ -87,18 +94,18 @@ namespace Tiled2Dmap.CLI.Dmap
                 {
                     if(portal.Type != "portal")
                     {
-                        Log.Warn($"Invalid object type in the portal object group: {portal.Type}");
+                        _logger.LogWarning("Invalid object type in the portal object group: {0}", portal.Type);
                         continue;
                     }
                     if(portal.Properties == null)
                     {
-                        Log.Warn("Portal without assigned Id");
+                        _logger.LogWarning("Portal without assigned Id");
                         continue;
                     }
                     TiledProperty portalProp = portal.Properties.Where(p => p.Name == "Id").FirstOrDefault();
                     if(portalProp == null)
                     {
-                        Log.Warn("Portal without assigned Id");
+                        _logger.LogWarning("Portal without assigned Id");
                         continue;
                     }
                     //int propId = (int)portalProp.Value;
@@ -114,7 +121,8 @@ namespace Tiled2Dmap.CLI.Dmap
                 }
             }
             else
-                Log.Info("No Portal layer found");
+                _logger.LogInformation("No Portal layer found");
+
             ObjectLayer effectLayer = (ObjectLayer)mainMap.GetLayer("Effects");
             if(effectLayer  != null)
             {
@@ -122,18 +130,18 @@ namespace Tiled2Dmap.CLI.Dmap
                 {
                     if (effect.Type != "effect")
                     {
-                        Log.Warn($"Invalid object type in the effect object group: {effect.Type}");
+                        _logger.LogWarning("Invalid object type in the effect object group: {0}", effect.Type);
                         continue;
                     }
                     if (effect.Properties == null)
                     {
-                        Log.Warn("Effect without Effect property assigned.");
+                        _logger.LogWarning("Effect without Effect property assigned.");
                         continue;
                     }
                     TiledProperty effectProp = effect.Properties.Where(p => p.Name == "Effect").FirstOrDefault();
                     if (effectProp == null)
                     {
-                        Log.Warn("Effect without Effect property assigned.");
+                        _logger.LogWarning("Effect without Effect property assigned.");
                         continue;
                     }
                     DmapFile.Effects.Add(new()
@@ -148,7 +156,8 @@ namespace Tiled2Dmap.CLI.Dmap
                 }
             }
             else
-                Log.Info("No Effect layer found");
+                _logger.LogInformation("No Effect layer found");
+
             ObjectLayer soundLayer = (ObjectLayer)mainMap.GetLayer("Sounds");
             if (soundLayer != null)
             {
@@ -156,12 +165,12 @@ namespace Tiled2Dmap.CLI.Dmap
                 {
                     if (sound.Type != "sound")
                     {
-                        Log.Warn($"Invalid object type in the sound object group {sound.Type}");
+                        _logger.LogWarning($"Invalid object type in the sound object group {0}", sound.Type);
                         continue;
                     }
                     if (sound.Properties == null)
                     {
-                        Log.Warn("Portal without assigned Id");
+                        _logger.LogWarning("Portal without assigned Id");
                         continue;
                     }
                     TiledProperty soundProp = sound.Properties.Where(p => p.Name == "Sound").FirstOrDefault();
@@ -169,7 +178,7 @@ namespace Tiled2Dmap.CLI.Dmap
                     TiledProperty rangeProp = sound.Properties.Where(p => p.Name == "Range").FirstOrDefault();
                     if (soundProp == null || volumeProp == null || rangeProp == null)
                     {
-                        Log.Warn("Sound missing Sound, Volume, or Range property.");
+                        _logger.LogWarning("Sound missing Sound, Volume, or Range property.");
                         continue;
                     }
                     DmapFile.Sounds.Add(new()
@@ -187,10 +196,10 @@ namespace Tiled2Dmap.CLI.Dmap
                 }
             }
             else
-                Log.Info("No Sound layer found");
+                _logger.LogInformation("No Sound layer found");
 
             ObjectLayer coverLayer = (ObjectLayer)mainMap.GetLayer("Covers");
-            AniFile coverAniFile = new($"ani/{MapName}c.ani");
+            AniFile coverAniFile = new($"ani/{_mapName}c.ani");
             Dictionary<int, string> aniObjIdMap = new();
             int coverIdx = 0;
             if (coverLayer != null)
@@ -199,19 +208,19 @@ namespace Tiled2Dmap.CLI.Dmap
                 {
                     if (cover.Type != "cover")
                     {
-                        Log.Warn($"Invalid object type in the cover object group: {cover.Type}");
+                        _logger.LogWarning("Invalid object type in the cover object group: {0}", cover.Type);
                         continue;
                     }
                     if (cover.Properties == null)
                     {
-                        Log.Warn("Cover without additional properties");
+                        _logger.LogWarning("Cover without additional properties");
                         continue;
                     }
                     TiledProperty baseWidthProp = cover.Properties.Where(p => p.Name == "BaseWidth").FirstOrDefault();
                     TiledProperty baseHeightProp = cover.Properties.Where(p => p.Name == "BaseHeight").FirstOrDefault();
                     if (baseWidthProp == null || baseHeightProp == null)
                     {
-                        Log.Warn("Cover missing BaseWidth or BaseHeight");
+                        _logger.LogWarning("Cover missing BaseWidth or BaseHeight");
                         continue;
                     }
 
@@ -228,7 +237,7 @@ namespace Tiled2Dmap.CLI.Dmap
                         {
                             if (coverTile.Type != "animatedtile")
                             {
-                                Log.Warn($"Invalid object type in the animated tile cover type: {coverTile.Type}");
+                                _logger.LogWarning("Invalid object type in the animated tile cover type: {0}", coverTile.Type);
                                 continue;
                             }
                             int maxWidth = 0;
@@ -252,7 +261,7 @@ namespace Tiled2Dmap.CLI.Dmap
                         {
                             if (coverTile.Type != "tile")
                             {
-                                Log.Warn($"Invalid object type in the tile cover type: {coverTile.Type}");
+                                _logger.LogWarning($"Invalid object type in the tile cover type: {0}", coverTile.Type);
                                 continue;
                             }
                             coverAni.Frames.Enqueue((coverTile as Tiled.Tile).Image.Replace(".png", ".dds"));
@@ -264,7 +273,7 @@ namespace Tiled2Dmap.CLI.Dmap
                         }
                         else
                         {
-                            Log.Warn("Unrecogonized tile type in covers");
+                            _logger.LogWarning("Unrecogonized tile type in covers");
                             continue;
                         }
                         if (coverIdx == 267)
@@ -323,7 +332,7 @@ namespace Tiled2Dmap.CLI.Dmap
                 {
                     if(!File.Exists(Path.Combine(TiledDirectory, "sound", sound.SoundFile)))
                     {
-                        Log.Warn($"Sound file doesn't exist {Path.Combine(TiledDirectory, sound.SoundFile)}");
+                        _logger.LogWarning("Sound file doesn't exist {0}", Path.Combine(TiledDirectory, sound.SoundFile));
                         continue;
                     }
                     if(!File.Exists(Path.Combine(DmapDirectory, sound.SoundFile)))
@@ -339,7 +348,7 @@ namespace Tiled2Dmap.CLI.Dmap
                         string tiledcoverpath = coverpath.Replace(".dds", ".png");
                         if (!File.Exists(Path.Combine(TiledDirectory, tiledcoverpath)))
                         {
-                            Log.Warn($"Cover file doesn't exist {Path.Combine(TiledDirectory, tiledcoverpath)}");
+                            _logger.LogWarning("Cover file doesn't exist {0}", Path.Combine(TiledDirectory, tiledcoverpath));
                             continue;
                         }
                         string coverfullPath = Path.Combine(DmapDirectory, coverpath);
@@ -373,8 +382,17 @@ namespace Tiled2Dmap.CLI.Dmap
             TiledMapFile mainMap = JsonSerializer.Deserialize<TiledMapFile>(File.ReadAllText(Path.Combine(TiledDirectory, "map_main.json")), jsOptions);
 
             TileLayer puzzleLayer = (TileLayer)mainMap.GetLayer("background");
+
+            //Size of the isometric tiles.
+            System.Drawing.Size tileSize = new ();
+
+            //Size of the resulting image. 
+            System.Drawing.Size extendedBackgroundSize = new(0, 0);
+
+            #region Determine Size
+            ///Need to determine the size of the background puzzle based on where the first defined tile is.
+            ///Background puzzles don't always extend to the edges of the isometric bounds.
             bool sizeSet = false;
-            Size extendedBackgroundSize = new(0, 0);
             Utility.PixelOffset puzzleOffset = new(0, 0);
             for(int yidx = 0; yidx < puzzleLayer.HeightTiles; yidx++)//Iterate isometric tile positions to find puzzle size.
             {
@@ -383,15 +401,18 @@ namespace Tiled2Dmap.CLI.Dmap
                     int tileId = puzzleLayer.Data[xidx + (yidx * puzzleLayer.WidthTiles)];
                     if (tileId == 0) continue;//No tile set.
 
+                    //Need to get the size of this tile to determine what the puzzle piece size is. (128 or 256). 
+                    tileSize = mainMap.GetTileSize(TiledDirectory, tileId, jsOptions);
+
                     //If the size hasn't been set this should be the first tile with graphics.
-                    int top = (xidx) * Constants.TiledTileHeight / 2;
-                    int left = (xidx) * Constants.TiledTileWidth;
-                    int height = (mainMap.WidthTiles - (xidx)) * Constants.TiledTileHeight;
-                    int width = (puzzleLayer.WidthTiles * Constants.TiledTileWidth) - (left * 2);
+                    int top = (xidx) * tileSize.Height / 2;
+                    int left = (xidx) * tileSize.Width;
+                    int height = (mainMap.WidthTiles - (xidx)) * tileSize.Height;
+                    int width = (puzzleLayer.WidthTiles * tileSize.Width) - (left * 2);
 
                     //Need to pad the outside of the bitmap to account for half tile overlap.
-                    width += Constants.TiledTileWidth;
-                    height += Constants.TiledTileHeight;
+                    width += tileSize.Width;
+                    height += tileSize.Height;
                     extendedBackgroundSize = new(width, height);
                     puzzleOffset = new(left, top);
                     sizeSet = true;
@@ -400,12 +421,18 @@ namespace Tiled2Dmap.CLI.Dmap
                 if (sizeSet)
                     break;
             }
+            #endregion Determine Size
 
-            Log.Info("Stitching Background from isometric tiles");
-            int currentProgress = 0;
-            Console.Write($"Stitching Puzzle File...{currentProgress:000}%");
-            Stopwatch sw1 = Stopwatch.StartNew();
+            #region Isometric Stitch
+
+            _logger.LogInformation("Stitching Background from isometric tiles");
+
             int expectedSlicedTiles = puzzleLayer.WidthTiles * puzzleLayer.HeightTiles;
+            ProgressBar stitchProgress = new(expectedSlicedTiles, 10);
+
+            _logger.LogInformation("Stitching Puzzle File...{0:000}%", stitchProgress.Progress);
+
+            Stopwatch sw1 = Stopwatch.StartNew();
 
             using Bitmap backgroundBmp = new(extendedBackgroundSize.Width, extendedBackgroundSize.Height);
             using (Graphics graphic = Graphics.FromImage(backgroundBmp))
@@ -418,9 +445,10 @@ namespace Tiled2Dmap.CLI.Dmap
                         if (tileId == 0) continue;//No tile set.
 
                         TiledTile tile = mainMap.GetTile(TiledDirectory, tileId, jsOptions);
+
                         if (tile.Type == "animatedtile")
                         {
-                            Log.Error("Animated tiles not supported on background");
+                            _logger.LogError("Animated tiles not supported on background");
                             throw new Exception("Animated tiles not supported on backgrond");
                         }
 
@@ -428,41 +456,56 @@ namespace Tiled2Dmap.CLI.Dmap
                         using (Bitmap tileBmp = new Bitmap(Path.Combine(TiledDirectory, imgPath)))
                         {
                             //(Iso X world origin + tile offset - tildwidth offset)
-                            int wx = (puzzleLayer.WidthTiles * Constants.TiledTileWidth / 2) + ((xidx - yidx) * Constants.TiledTileWidth / 2) - Constants.TiledTileWidth / 2;
-                            int wy = (xidx + yidx) * Constants.TiledTileHeight / 2;
-                            int px = wx - puzzleOffset.X + Constants.TiledTileWidth / 2; //World to Puzzle + offset for extended border.
-                            int py = wy - puzzleOffset.Y + Constants.TiledTileHeight / 2;//World to Puzzle + offset for extended border.
+                            int wx = (puzzleLayer.WidthTiles * tileSize.Width / 2) + ((xidx - yidx) * tileSize.Width / 2) - tileSize.Width / 2;
+                            int wy = (xidx + yidx) * tileSize.Height/ 2;
+                            int px = wx - puzzleOffset.X + tileSize.Width / 2; //World to Puzzle + offset for extended border.
+                            int py = wy - puzzleOffset.Y + tileSize.Height / 2;//World to Puzzle + offset for extended border.
 
                             graphic.DrawImage(tileBmp, new Point(px, py));
                         }
-                        int progress = ((puzzleLayer.WidthTiles * yidx + xidx) * 100) / expectedSlicedTiles;
-                        if (progress > currentProgress)
-                        {
-                            currentProgress = progress;
-                            Console.Write($"\rStitching Puzzle File...{currentProgress:000}%");
-                        }
+                        if(stitchProgress.Increment(1))
+                            _logger.LogInformation("Stitching Puzzle File...{0:000}%", stitchProgress.Progress);
                     }
                 }
             }
             sw1.Stop();
-            Console.WriteLine($"\rStitching Puzzle File...100% - {sw1.Elapsed.TotalSeconds} seconds");
 
-            using Bitmap trimBmp = backgroundBmp.Clone(new Rectangle(Constants.TiledTileWidth / 2, Constants.TiledTileHeight / 2, backgroundBmp.Width - Constants.TiledTileWidth, backgroundBmp.Height - Constants.TiledTileHeight), backgroundBmp.PixelFormat);
+            _logger.LogInformation("Stitching Puzzle File completed in {0} seconds",sw1.Elapsed.TotalSeconds);
+
+            #endregion Isometric Stitch
+
+            
+            using Bitmap trimBmp = backgroundBmp.Clone(new Rectangle(tileSize.Width/ 2, tileSize.Height / 2, backgroundBmp.Width - tileSize.Width, backgroundBmp.Height - tileSize.Height), backgroundBmp.PixelFormat);
+
             backgroundBmp.Dispose();
-            if(trimBmp.Width % Constants.PuzzleWidth != 0 || trimBmp.Height % Constants.PuzzleHeight != 0)
+
+            //Determine the size to slice the puzzle into.
+            System.Drawing.Size puzzleTileSize = new();
+            if(trimBmp.Width % 256 == 0 && trimBmp.Height % 256 == 0)
             {
-                //TODO: This can be determined pre-stitch
-                Log.Error($"Resulting background is not equally divisible by Puzzle size {Constants.PuzzleHeight}");
+                puzzleTileSize = new(256, 256);
+                _logger.LogDebug("Puzzle Tile Size determined to be 256");
+            }
+            else if(trimBmp.Width % 128 == 0 && trimBmp.Height % 128 == 0)
+            {
+                puzzleTileSize = new(128, 128);
+                _logger.LogDebug("Puzzle Tile Size determined to be 128");
+            }
+            else
+            {
+                //Really any puzzle size can be supported....
+                _logger.LogError("Resulting background is not equally divisible by 256 or 128");
                 return;
+
             }
 
-            AniFile aniFile = new AniFile($"ani/{MapName}.ani");
-            PuzzleFile puzzleFile = new PuzzleFile($"map/puzzle/{MapName}.pul")
+            AniFile aniFile = new AniFile($"ani/{_mapName}.ani");
+            PuzzleFile puzzleFile = new PuzzleFile($"map/puzzle/{_mapName}.pul")
             {
                 Size = new()
                 {
-                    Width = (uint)(trimBmp.Width / Constants.PuzzleWidth),
-                    Height = (uint)(trimBmp.Height / Constants.PuzzleHeight)
+                    Width = (uint)(trimBmp.Width / puzzleTileSize.Width),
+                    Height = (uint)(trimBmp.Height / puzzleTileSize.Height)
                 },
                 AniFile = aniFile.AniFilePath,
                 Header = "PUZZLE2",
@@ -472,15 +515,17 @@ namespace Tiled2Dmap.CLI.Dmap
 
             
             //Create the data directory for map DDS resources.
-            string relativeResourcePath = Path.Combine("data", "map", "puzzle", MapName);
+            string relativeResourcePath = Path.Combine("data", "map", "puzzle", _mapName);
             string ResourcePath = Path.Combine(DmapDirectory, relativeResourcePath);
             Directory.CreateDirectory(ResourcePath);
 
-            Log.Info("Slicing background into puzzle pieces");
-            currentProgress = 0;
-            Console.Write($"Slicing Puzzle File...{currentProgress:000}%");
-            sw1 = Stopwatch.StartNew();
+            _logger.LogInformation("Slicing background into puzzle pieces");
+
             expectedSlicedTiles = (int)puzzleFile.Size.Width * (int)puzzleFile.Size.Height;
+            ProgressBar sliceProgress = new(expectedSlicedTiles, 10);
+            
+            _logger.LogInformation("Slicing Puzzle File...{0:000}%", sliceProgress.Progress);
+            sw1 = Stopwatch.StartNew();
 
             int puzzleIdx = 0;
             Dictionary<string, int> imgHashMap = new();
@@ -488,7 +533,7 @@ namespace Tiled2Dmap.CLI.Dmap
             {
                 for(int xidx = 0; xidx < puzzleFile.Size.Width; xidx++)
                 {
-                    using (Bitmap puzzBmp = trimBmp.Clone(new Rectangle(xidx * Constants.PuzzleWidth, yidx * Constants.PuzzleHeight, Constants.PuzzleWidth, Constants.PuzzleHeight), trimBmp.PixelFormat))
+                    using (Bitmap puzzBmp = trimBmp.Clone(new Rectangle(xidx * puzzleTileSize.Width, yidx * puzzleTileSize.Height, puzzleTileSize.Width, puzzleTileSize.Height), trimBmp.PixelFormat))
                     {
                         string hash = ImageServices.ImageHash.GetImageHash(puzzBmp);
                         int thisIdx = 0;
@@ -508,16 +553,12 @@ namespace Tiled2Dmap.CLI.Dmap
                         }
                         puzzleFile.PuzzleTiles[xidx, yidx] = (ushort)thisIdx;
                     }
-                    int progress = (((int)puzzleFile.Size.Width * yidx + xidx) * 100) / expectedSlicedTiles;
-                    if (progress > currentProgress)
-                    {
-                        currentProgress = progress;
-                        Console.Write($"\rSlicing Puzzle File...{currentProgress:000}%");
-                    }
+                    if(sliceProgress.Increment(1))
+                        _logger.LogInformation("Slicing Puzzle File...{0:000}%", sliceProgress.Progress);
                 }
             }
             sw1.Stop();
-            Console.WriteLine($"\rSlicing Puzzle File...100% - {sw1.Elapsed.TotalSeconds} seconds");
+            Console.WriteLine("Slicing Puzzle File completed in {0} seconds", sw1.Elapsed.TotalSeconds);
 
             //Save the puzzle and the ani files.
             puzzleFile.Save(DmapDirectory);

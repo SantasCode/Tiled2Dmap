@@ -132,8 +132,8 @@ namespace Tiled2Dmap.CLI.ImageHelp
                             result.TileSetFile.Tiles.Add(new Tiled.Tile()
                             {
                                 Id = tileIdx,
-                                ImageWidth = Constants.TiledTileWidth,
-                                ImageHeight = Constants.TiledTileHeight,
+                                ImageWidth = TileWidth,
+                                ImageHeight = TileHeight,
                                 Image = imgRelativePath
                             });
 
