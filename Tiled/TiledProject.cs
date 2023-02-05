@@ -40,7 +40,7 @@ namespace Tiled2Dmap.CLI.Tiled
         public void AddDirectory(string DirectoryPath)
         {
             if (!Directory.Exists(DirectoryPath)) Directory.CreateDirectory(DirectoryPath);
-            if (!this.Folders.Contains(DirectoryPath)) this.Folders.Add(DirectoryPath);
+            //if (!this.Folders.Contains(DirectoryPath)) this.Folders.Add(DirectoryPath);
         }
         public void Copy(string FilePath, string DestinationSubDirectory)
         {
@@ -262,7 +262,7 @@ namespace Tiled2Dmap.CLI.Tiled
             });
 
             //Save the portal tile set.
-            string portalTileSetPath = $"{Path.Combine(tiledProject.ProjectDirectory, "tiled")}/ts_portal.json";
+            string portalTileSetPath = $"{Path.Combine(tiledProject.ProjectDirectory, "tiled", "portal")}/ts_portal.json";
             File.WriteAllText(portalTileSetPath, JsonSerializer.Serialize(portalTileSet, jsOptions));
 
             //Add the portal tile set to the map file
