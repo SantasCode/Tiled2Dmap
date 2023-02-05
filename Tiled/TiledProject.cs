@@ -282,8 +282,8 @@ namespace Tiled2Dmap.CLI.Tiled
                 portalLayer.Objects.Add(new PortalObject(portal.Id)
                 {
                     Name = $"Portal_{portalIdx++}",
-                    XPixels = (int)(portal.Position.X * Constants.DmapTileHeight),// + Resources.exit_128x64.Width / 2,
-                    YPixels = (int)(portal.Position.Y * Constants.DmapTileHeight),// + Resources.exit_128x64.Height / 2, //Intentionally tile height.
+                    XPixels = (int)(portal.Position.X * Constants.DmapTileHeight),
+                    YPixels = (int)(portal.Position.Y * Constants.DmapTileHeight),
                     Width = Resources.exit_128x64.Width,
                     Height = Resources.exit_128x64.Height,
                     GId = NextGlobalTileId
@@ -483,7 +483,7 @@ namespace Tiled2Dmap.CLI.Tiled
             coverTileSet.TileHeight = maxTileHeight;
 
             //Save the tileset
-            string coverTileSetPath = $"{Path.Combine(tiledProject.ProjectDirectory, "tiled")}/{coverTileSet.Name}.json";
+            string coverTileSetPath = $"{Path.Combine(tiledProject.ProjectDirectory, "tiled", "cover")}/{coverTileSet.Name}.json";
             File.WriteAllText(coverTileSetPath, JsonSerializer.Serialize(coverTileSet, jsOptions));
 
             mainMapFile.TileSets.Add(new InternalTileSet()
@@ -498,15 +498,15 @@ namespace Tiled2Dmap.CLI.Tiled
             #endregion
 
             #region Scenes
+            string sceneProjDir = Path.Combine(ProjectDirectory, "tiled", "scenes");
             if (DmapFile.TerrainScenes.Count > 0)
             {
-                Log.Error("Scenes not yet supoprted");
-
-                tiledProject.AddDirectory(Path.Combine(tiledProject.ProjectDirectory, "tiled", "scenes"));
+                tiledProject.AddDirectory(sceneProjDir);
 
                 foreach (var scene in DmapFile.TerrainScenes)
                 {
-                    //Each terrain scene will have its own directory, map, and access map.
+                    //Each scene will be a scene layer. The pixel offset will be the layer offset. The other positions will be true.
+                    //Each scene will have its own access layer. The access layer will not be offset. 
                     //Each scene will have an object on the main map with a reference to the scene directory.
                 }
             }
