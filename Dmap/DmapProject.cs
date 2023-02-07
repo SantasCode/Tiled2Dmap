@@ -562,7 +562,7 @@ namespace Tiled2Dmap.CLI.Dmap
 
             //Save the puzzle and the ani files.
             puzzleFile.Save(DmapDirectory);
-            aniFile.Save(Path.Combine(DmapDirectory, "ani"));
+            aniFile.Save(DmapDirectory);
         }
     }
 }
