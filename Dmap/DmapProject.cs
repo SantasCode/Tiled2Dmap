@@ -18,6 +18,8 @@ namespace Tiled2Dmap.CLI.Dmap
     public class DmapProject
     {
         private readonly ILogger _logger;
+
+        private JsonSerializerOptions jsOptions;
         public string DmapDirectory { get { return Path.Combine(_projectDirectory, "dmap"); } }
         public string TiledDirectory { get { return Path.Combine(_projectDirectory, "tiled"); } }
 
@@ -38,6 +40,16 @@ namespace Tiled2Dmap.CLI.Dmap
 
             this._mapName = MapName;
 
+            #region Setup Json Options
+            jsOptions = new JsonSerializerOptions()
+            {
+                PropertyNamingPolicy = new Tiled.Json.LowerCaseNamingPolicy(),
+                WriteIndented = true
+            };
+            jsOptions.Converters.Add(new Tiled.Json.TiledLayerConverter());
+            jsOptions.Converters.Add(new Tiled.Json.TiledObjectConverter());
+            jsOptions.Converters.Add(new Tiled.Json.TileConverter());
+            #endregion Setup Json Options
         }
 
         /// <summary>
@@ -363,22 +375,58 @@ namespace Tiled2Dmap.CLI.Dmap
             //Save the dmp
             DmapFile.Save(DmapDirectory);
         }
+
+        private System.Drawing.Rectangle GetPuzzleSize(System.Drawing.Size mapSize, System.Drawing.Size tileSize, int[] tileData)
+        {
+            int top = int.MaxValue, right = int.MinValue, bottom = int.MinValue, left = int.MaxValue;
+
+            int mapPixelWidth = (mapSize.Width + mapSize.Height) * tileSize.Width / 2;
+            int mapPixelHeight = (mapSize.Width + mapSize.Height) * tileSize.Height / 2;
+
+            for(int yidx = 0; yidx < mapSize.Height; yidx++)
+            {
+                for(int xidx = 0; xidx < mapSize.Width; xidx++)
+                {
+                    //Skip it if the tile is undefined.
+                    if (tileData[xidx + (yidx * mapSize.Width)] == 0) continue;
+
+                    //Calculate the position of the center of this tile, top left is origin.
+                    int tilePixelTop = (xidx + yidx) * tileSize.Height / 2;
+                    int tilePixelBottom = tilePixelTop + tileSize.Height;
+                    int tilePixelLeft = (mapPixelWidth / 2) + ((xidx - yidx) * tileSize.Width / 2);
+                    int tilePixelRight = tilePixelLeft + tileSize.Width;
+
+                    if(tilePixelTop < top) top = tilePixelTop;
+                    if(tilePixelBottom > bottom) bottom = tilePixelBottom;
+                    if(tilePixelLeft < left) left = tilePixelLeft;
+                    if(tilePixelRight > right) right = tilePixelRight;
+                }
+            }
+
+            //Calculate the size that is centered and captures the whole map.
+            int rightDelta = right - mapPixelWidth / 2;
+            int leftDelta = mapPixelWidth / 2 - left;
+            int bottomDelta = bottom - mapPixelHeight / 2;
+            int topDelta = mapPixelHeight / 2 - top;
+
+            if (rightDelta > leftDelta)
+                left = mapPixelWidth / 2 - rightDelta;
+            else
+                right = mapPixelWidth / 2 + leftDelta;
+
+            if(bottomDelta > topDelta)
+                top = mapPixelHeight / 2 - bottomDelta;
+            else
+                bottom = mapPixelHeight / 2 + topDelta;
+
+            return new System.Drawing.Rectangle(left, top, right - left, bottom - top);
+        }
         /// <summary>
         /// Creates Puzzle file and copies puzzle resources.
         /// </summary>
         public void AssemblePuzzle()
         {
-            #region Setup Json Options
-            JsonSerializerOptions jsOptions = new JsonSerializerOptions()
-            {
-                PropertyNamingPolicy = new Tiled.Json.LowerCaseNamingPolicy(),
-                WriteIndented = true
-            };
-            jsOptions.Converters.Add(new Tiled.Json.TiledLayerConverter());
-            jsOptions.Converters.Add(new Tiled.Json.TiledObjectConverter());
-            jsOptions.Converters.Add(new Tiled.Json.TileConverter());
-            #endregion Setup Json Options
-
+            
             TiledMapFile mainMap = JsonSerializer.Deserialize<TiledMapFile>(File.ReadAllText(Path.Combine(TiledDirectory, "map_main.json")), jsOptions);
 
             TileLayer puzzleLayer = (TileLayer)mainMap.GetLayer("background");
@@ -386,14 +434,7 @@ namespace Tiled2Dmap.CLI.Dmap
             //Size of the isometric tiles.
             System.Drawing.Size tileSize = new ();
 
-            //Size of the resulting image. 
-            System.Drawing.Size extendedBackgroundSize = new(0, 0);
-
-            #region Determine Size
-            ///Need to determine the size of the background puzzle based on where the first defined tile is.
-            ///Background puzzles don't always extend to the edges of the isometric bounds.
             bool sizeSet = false;
-            Utility.PixelOffset puzzleOffset = new(0, 0);
             for(int yidx = 0; yidx < puzzleLayer.HeightTiles; yidx++)//Iterate isometric tile positions to find puzzle size.
             {
                 for(int xidx = 0; xidx < puzzleLayer.WidthTiles; xidx++)
@@ -404,23 +445,36 @@ namespace Tiled2Dmap.CLI.Dmap
                     //Need to get the size of this tile to determine what the puzzle piece size is. (128 or 256). 
                     tileSize = mainMap.GetTileSize(TiledDirectory, tileId, jsOptions);
 
-                    //If the size hasn't been set this should be the first tile with graphics.
-                    int top = (xidx) * tileSize.Height / 2;
-                    int left = (xidx) * tileSize.Width;
-                    int height = (mainMap.WidthTiles - (xidx)) * tileSize.Height;
-                    int width = (puzzleLayer.WidthTiles * tileSize.Width) - (left * 2);
+                    ////If the size hasn't been set this should be the first tile with graphics.
+                    //int top = (xidx) * tileSize.Height / 2;
+                    //int left = (xidx) * tileSize.Width;
+                    //int height = (mainMap.WidthTiles - (xidx)) * tileSize.Height;
+                    //int width = (puzzleLayer.WidthTiles * tileSize.Width) - (left * 2);
 
-                    //Need to pad the outside of the bitmap to account for half tile overlap.
-                    width += tileSize.Width;
-                    height += tileSize.Height;
-                    extendedBackgroundSize = new(width, height);
-                    puzzleOffset = new(left, top);
+                    ////Need to pad the outside of the bitmap to account for half tile overlap.
+                    //width += tileSize.Width;
+                    //height += tileSize.Height;
+                    //extendedBackgroundSize = new(width, height);
+                    //puzzleOffset = new(left, top);
                     sizeSet = true;
                     break;
                 }
                 if (sizeSet)
                     break;
             }
+
+            //Size of the resulting image. 
+            System.Drawing.Rectangle boundingRect = GetPuzzleSize(new System.Drawing.Size(puzzleLayer.WidthTiles, puzzleLayer.HeightTiles), tileSize, puzzleLayer.Data);
+            System.Drawing.Size extendedBackgroundSize = boundingRect.Size;
+
+            //Add an extended border around the background, of an additional tile.
+            extendedBackgroundSize += tileSize;
+
+            System.Drawing.Point puzzleOffset = boundingRect.Location;
+
+            #region Determine Size
+            ///Need to determine the size of the background puzzle based on where the first defined tile is.
+            ///Background puzzles don't always extend to the edges of the isometric bounds.
             #endregion Determine Size
 
             #region Isometric Stitch
@@ -472,6 +526,7 @@ namespace Tiled2Dmap.CLI.Dmap
 
             _logger.LogInformation("Stitching Puzzle File completed in {0} seconds",sw1.Elapsed.TotalSeconds);
 
+            backgroundBmp.Save("C:\\Temp\\comaps\\test.png");
             #endregion Isometric Stitch
 
             
