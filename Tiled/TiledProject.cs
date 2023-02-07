@@ -208,13 +208,13 @@ namespace Tiled2Dmap.CLI.Tiled
             PuzzleFile backgroundPuzzle = new PuzzleFile(ClientResources.ClientDirectory, DmapFile.PuzzleFile);
 
             IsometricSliceResult bgSliceResults = new();
-
+            IsometricSlice isometricSlicer;
             using (ImageServices.Stitch imageStitch = new(ClientResources, backgroundPuzzle))
             {
                 CordConverter cordConverter = new(new Size((int)DmapFile.SizeTiles.Width, (int)DmapFile.SizeTiles.Height), imageStitch.Image.Size);
-                IsometricSlice isometricSlicer = new(ConsoleAppLogger.CreateLogger<IsometricSlice>(), "background", ProjectDirectory, imageStitch.Image, cordConverter);
-                bgSliceResults = isometricSlicer.Slice();
+                isometricSlicer = new(ConsoleAppLogger.CreateLogger<IsometricSlice>(), "background", ProjectDirectory, imageStitch.Image, cordConverter);
             }
+            bgSliceResults = isometricSlicer.Slice();
 
             //(backgroundTileSet, backgroundTileLayer) = TileSetFile.TileSetFromPuzzleFile("background", ClientResources, tiledProject._projectDirectory, DmapFile.PuzzleFile, DmapFile.SizeTiles);
 
