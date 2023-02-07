@@ -525,8 +525,6 @@ namespace Tiled2Dmap.CLI.Dmap
             sw1.Stop();
 
             _logger.LogInformation("Stitching Puzzle File completed in {0} seconds",sw1.Elapsed.TotalSeconds);
-
-            backgroundBmp.Save("C:\\Temp\\comaps\\test.png");
             #endregion Isometric Stitch
 
             
