@@ -376,7 +376,7 @@ namespace Tiled2Dmap.CLI.Dmap
             DmapFile.Save(DmapDirectory);
         }
 
-        private System.Drawing.Rectangle GetPuzzleSize(System.Drawing.Size mapSize, System.Drawing.Size tileSize, int[] tileData)
+        private System.Drawing.Rectangle GetPuzzleRect(System.Drawing.Size mapSize, System.Drawing.Size tileSize, int[] tileData)
         {
             int top = int.MaxValue, right = int.MinValue, bottom = int.MinValue, left = int.MaxValue;
 
@@ -419,7 +419,29 @@ namespace Tiled2Dmap.CLI.Dmap
             else
                 bottom = mapPixelHeight / 2 + topDelta;
 
-            return new System.Drawing.Rectangle(left, top, right - left, bottom - top);
+            return new(left, top, right - left, bottom - top);
+        }
+
+        private System.Drawing.Size GetPuzzleSizeAdder(System.Drawing.Size mapSize, System.Drawing.Size tileSize, int puzzlePieceSize)
+        {
+            //If it is already divisible by return 0,0
+            if(IsEquallyDivisible(mapSize, puzzlePieceSize)) return new(0, 0);
+
+            //check to see if its divisible by the puzzlePieceSize if we subtract a tileSize
+
+            System.Drawing.Size tempSize = new(mapSize.Width - tileSize.Width, mapSize.Height - tileSize.Height);
+
+            if (IsEquallyDivisible(tempSize, puzzlePieceSize)) return new (tileSize.Width * -1, tileSize.Height * -1);
+
+            //Determine how much larger it needs to be made to make it divisible.
+            int deltaWidth = (puzzlePieceSize - (mapSize.Width % puzzlePieceSize)) % puzzlePieceSize;
+            int deltaHeight = (puzzlePieceSize - (mapSize.Height % puzzlePieceSize)) % puzzlePieceSize;
+
+            return new(deltaWidth, deltaHeight);
+        }
+        private bool IsEquallyDivisible(System.Drawing.Size mapSize, int divisor)
+        {
+            return mapSize.Width % divisor == 0 && mapSize.Height % divisor == 0;
         }
         /// <summary>
         /// Creates Puzzle file and copies puzzle resources.
@@ -445,17 +467,6 @@ namespace Tiled2Dmap.CLI.Dmap
                     //Need to get the size of this tile to determine what the puzzle piece size is. (128 or 256). 
                     tileSize = mainMap.GetTileSize(TiledDirectory, tileId, jsOptions);
 
-                    ////If the size hasn't been set this should be the first tile with graphics.
-                    //int top = (xidx) * tileSize.Height / 2;
-                    //int left = (xidx) * tileSize.Width;
-                    //int height = (mainMap.WidthTiles - (xidx)) * tileSize.Height;
-                    //int width = (puzzleLayer.WidthTiles * tileSize.Width) - (left * 2);
-
-                    ////Need to pad the outside of the bitmap to account for half tile overlap.
-                    //width += tileSize.Width;
-                    //height += tileSize.Height;
-                    //extendedBackgroundSize = new(width, height);
-                    //puzzleOffset = new(left, top);
                     sizeSet = true;
                     break;
                 }
@@ -464,7 +475,7 @@ namespace Tiled2Dmap.CLI.Dmap
             }
 
             //Size of the resulting image. 
-            System.Drawing.Rectangle boundingRect = GetPuzzleSize(new System.Drawing.Size(puzzleLayer.WidthTiles, puzzleLayer.HeightTiles), tileSize, puzzleLayer.Data);
+            System.Drawing.Rectangle boundingRect = GetPuzzleRect(new System.Drawing.Size(puzzleLayer.WidthTiles, puzzleLayer.HeightTiles), tileSize, puzzleLayer.Data);
             System.Drawing.Size extendedBackgroundSize = boundingRect.Size;
 
             //Add an extended border around the background, of an additional tile.
@@ -527,30 +538,24 @@ namespace Tiled2Dmap.CLI.Dmap
             _logger.LogInformation("Stitching Puzzle File completed in {0} seconds",sw1.Elapsed.TotalSeconds);
             #endregion Isometric Stitch
 
+            //Slice all puzzle pieces to be 256. I don't see a reason to continue to support 128.
+            int puzzleSize = 256;
+
+            System.Drawing.Size sizeAdder = GetPuzzleSizeAdder(backgroundBmp.Size, tileSize, puzzleSize);
+
+            //The image may need to be made smaller or larger depending on the sizeAdder.
+
+            ////TODO
+            ////
+            ///
             
-            using Bitmap trimBmp = backgroundBmp.Clone(new Rectangle(tileSize.Width/ 2, tileSize.Height / 2, backgroundBmp.Width - tileSize.Width, backgroundBmp.Height - tileSize.Height), backgroundBmp.PixelFormat);
+            using Bitmap trimBmp = backgroundBmp.Clone(new Rectangle(sizeAdder.Width/ 2, sizeAdder.Height / 2, backgroundBmp.Width - sizeAdder.Width, backgroundBmp.Height - sizeAdder.Height), backgroundBmp.PixelFormat);
 
             backgroundBmp.Dispose();
 
-            //Determine the size to slice the puzzle into.
-            System.Drawing.Size puzzleTileSize = new();
-            if(trimBmp.Width % 256 == 0 && trimBmp.Height % 256 == 0)
-            {
-                puzzleTileSize = new(256, 256);
-                _logger.LogDebug("Puzzle Tile Size determined to be 256");
-            }
-            else if(trimBmp.Width % 128 == 0 && trimBmp.Height % 128 == 0)
-            {
-                puzzleTileSize = new(128, 128);
-                _logger.LogDebug("Puzzle Tile Size determined to be 128");
-            }
-            else
-            {
-                //Really any puzzle size can be supported....
-                _logger.LogError("Resulting background is not equally divisible by 256 or 128");
-                return;
+            System.Drawing.Size puzzleTileSize = new(puzzleSize, puzzleSize);
 
-            }
+
 
             AniFile aniFile = new AniFile($"ani/{_mapName}.ani");
             PuzzleFile puzzleFile = new PuzzleFile($"map/puzzle/{_mapName}.pul")
