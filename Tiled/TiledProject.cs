@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.IO;
-using System.Drawing;
 using Tiled2Dmap.CLI.Dmap;
 using Tiled2Dmap.CLI.ImageHelp;
+using SixLabors.ImageSharp.PixelFormats;
+using Tiled2Dmap.CLI.ImageServices;
+using SixLabors.ImageSharp;
 
 namespace Tiled2Dmap.CLI.Tiled
 {
@@ -206,17 +204,15 @@ namespace Tiled2Dmap.CLI.Tiled
 
             //Stitch up the puzzle file.
             PuzzleFile backgroundPuzzle = new PuzzleFile(ClientResources.ClientDirectory, DmapFile.PuzzleFile);
-
             IsometricSliceResult bgSliceResults = new();
             IsometricSlice isometricSlicer;
-            using (ImageServices.Stitch imageStitch = new(ClientResources, backgroundPuzzle))
-            {
-                CordConverter cordConverter = new(new Size((int)DmapFile.SizeTiles.Width, (int)DmapFile.SizeTiles.Height), imageStitch.Image.Size);
-                isometricSlicer = new(ConsoleAppLogger.CreateLogger<IsometricSlice>(), "background", ProjectDirectory, imageStitch.Image, cordConverter);
-            }
-            bgSliceResults = isometricSlicer.Slice();
 
-            //(backgroundTileSet, backgroundTileLayer) = TileSetFile.TileSetFromPuzzleFile("background", ClientResources, tiledProject._projectDirectory, DmapFile.PuzzleFile, DmapFile.SizeTiles);
+            using (ImageServices.Stitch imageStitchIs = new(ClientResources, backgroundPuzzle))
+            {
+                CordConverter cordConverter = new(new System.Drawing.Size((int)DmapFile.SizeTiles.Width, (int)DmapFile.SizeTiles.Height), new(imageStitchIs.Image.Width, imageStitchIs.Image.Height));
+                isometricSlicer = new(ConsoleAppLogger.CreateLogger<IsometricSlice>(), "background", ProjectDirectory, imageStitchIs.Image, cordConverter);
+                bgSliceResults = isometricSlicer.Slice();
+            }
 
             string backgroundtileSetPath = $"{Path.Combine(tiledProject.ProjectDirectory, "tiled")}/{bgSliceResults.TileSetFile.Name}.json";
             File.WriteAllText(backgroundtileSetPath, JsonSerializer.Serialize(bgSliceResults.TileSetFile, jsOptions));
@@ -404,24 +400,25 @@ namespace Tiled2Dmap.CLI.Tiled
                             //Convert the DDS to a png.
                             string coverBmpPath = Path.Combine(coverProjDir, aniFrame);
                             Directory.CreateDirectory(Path.GetDirectoryName(coverBmpPath));
-                            using (Bitmap coverBmp = ImageServices.DDSConvert.StreamToPng(ClientResources.GetFile(aniFrame)))
+
+                            using (Image<Rgba32> coverImage = DDSConvert.LoadImageSharp(ClientResources.GetFile(aniFrame)))
                             {
+
                                 //TOOD: Maintain original relative path
-                                coverBmp.Save(coverBmpPath);
+                                coverImage.SaveAsPng(coverBmpPath);
 
                                 //Add this tile to the tileset.
                                 coverTileSet.Tiles.Add(new Tile()
                                 {
                                     Id = coverTileSet.TileCount,
-                                    ImageWidth = coverBmp.Width,
-                                    ImageHeight = coverBmp.Height,
+                                    ImageWidth = coverImage.Width,
+                                    ImageHeight = coverImage.Height,
                                     Image = Path.GetRelativePath(coverProjDir, coverBmpPath)
                                 });
 
-                                if (coverBmp.Width > coverObj.Width) coverObj.Width = coverBmp.Width;
-                                if (coverBmp.Height > coverObj.Height) coverObj.Height = coverBmp.Height;
+                                if (coverImage.Width > coverObj.Width) coverObj.Width = coverImage.Width;
+                                if (coverImage.Height > coverObj.Height) coverObj.Height = coverImage.Height;
                             }
-
                             //Add the frame to the animatedTile.
                             animatedTile.Frames.Add(new()
                             {
@@ -444,21 +441,21 @@ namespace Tiled2Dmap.CLI.Tiled
                         Directory.CreateDirectory(Path.GetDirectoryName(coverBmpPath));
 
                         //The tile is not animated.
-                        using (Bitmap coverBmp = ImageServices.DDSConvert.StreamToPng(ClientResources.GetFile(coverAniRelPath)))
+                        using (Image<Rgba32> coverImage = DDSConvert.LoadImageSharp(ClientResources.GetFile(coverAniRelPath)))
                         {
                             //TOOD: Maintain original relative path
-                            coverBmp.Save(coverBmpPath);
+                            coverImage.Save(coverBmpPath);
 
                             //Add this tile to the tileset.
                             coverTileSet.Tiles.Add(new Tile()
                             {
                                 Id = coverTileSet.TileCount,
-                                ImageWidth = coverBmp.Width,
-                                ImageHeight = coverBmp.Height,
+                                ImageWidth = coverImage.Width,
+                                ImageHeight = coverImage.Height,
                                 Image = Path.GetRelativePath(coverProjDir, coverBmpPath)
                             });
-                            coverObj.Width = coverBmp.Width;
-                            coverObj.Height = coverBmp.Height;
+                            coverObj.Width = coverImage.Width;
+                            coverObj.Height = coverImage.Height;
                         }
                         coverObj.GId = NextGlobalTileId + coverTileSet.TileCount - 1; // Remove one because it is the most recently added tile.
                     }

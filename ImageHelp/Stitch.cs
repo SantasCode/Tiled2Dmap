@@ -1,36 +1,36 @@
 ﻿using System;
-using System.Drawing;
 using Tiled2Dmap.CLI.Dmap;
-using System.IO;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace Tiled2Dmap.CLI.ImageServices
 {
     public class Stitch : IDisposable
     {
-        public Bitmap Image { get => _image; }
-        private Bitmap _image;
 
-        private Graphics _graphic;
+        public Image<Rgba32> Image { get; private set; } = null;
 
         public PuzzleFile PuzzleFile { get; init; }
 
-        public Size PuzzlePieceSize { get; private set; }
+        private Size puzzlePieceSize = new Size(0, 0);
 
-        private Utility.ClientResources ClientResources;
+        private readonly Utility.ClientResources _clientResources;
 
-        public Stitch(Utility.ClientResources ClientResources, PuzzleFile PuzzleFile)
+        public Stitch(Utility.ClientResources clientResources, PuzzleFile puzzleFile)
         {
-            this.ClientResources = ClientResources;
-            this.PuzzleFile = PuzzleFile;
-            this.LoadStitch();
+            _clientResources = clientResources;
+            PuzzleFile = puzzleFile;
+            
+            LoadStitch();
         }
 
         private void LoadStitch()
         {
             //There is only a single ani file, load it.
-            AniFile aniFile = new AniFile(this.ClientResources.ClientDirectory, this.PuzzleFile.AniFile);
+            AniFile aniFile = new AniFile(this._clientResources.ClientDirectory, this.PuzzleFile.AniFile);
 
-            bool SizeIsSet = false;
+            bool sizeIsSet = false;
 
             int currentProgress = 0;
             Console.Write($"Stitching Puzzle File...{currentProgress:000}%");
@@ -52,21 +52,19 @@ namespace Tiled2Dmap.CLI.ImageServices
                         Console.WriteLine($"Warning: More than one frame in puzzle piece {aniFile.AniFilePath} - Puzzle{puzzleId}. Only stitching first frame.");
 
                     string puzzlePiecePath = puzzlePieceFrames.Peek().Trim();
-
-                    using (Bitmap pieceBitmap = (Path.GetExtension(puzzlePiecePath) == ".dds" ?
-                        DDSConvert.StreamToPng(this.ClientResources.GetFile(puzzlePiecePath)) :
-                        new Bitmap(this.ClientResources.GetFile(puzzlePiecePath))))
+                    using (Image<Rgba32> pieceImage = DDSConvert.LoadImageSharp(_clientResources.GetFile(puzzlePiecePath)))
                     {
-                        if (!SizeIsSet)
+                        if (!sizeIsSet)
                         {
-                            this.PuzzlePieceSize = pieceBitmap.Size;
-                            SizeIsSet = true;
-                            _image = new Bitmap(this.PuzzlePieceSize.Width * (int)this.PuzzleFile.Size.Width, this.PuzzlePieceSize.Height * (int)this.PuzzleFile.Size.Height);
+                            puzzlePieceSize = pieceImage.Size();
+                            sizeIsSet = true;
 
-                            _graphic = Graphics.FromImage(_image);
-                            }
-
-                        _graphic.DrawImage(pieceBitmap, xidx * this.PuzzlePieceSize.Width, yidx * this.PuzzlePieceSize.Height);
+                            Image = new(puzzlePieceSize.Width * (int)this.PuzzleFile.Size.Width, puzzlePieceSize.Height * (int)this.PuzzleFile.Size.Height);
+                        }
+                        Image.Mutate(x =>
+                        {
+                            x.DrawImage(pieceImage, new SixLabors.ImageSharp.Point(xidx * puzzlePieceSize.Width, yidx * puzzlePieceSize.Height), 1);
+                        });
                     }
 
                     int progress = (((int)this.PuzzleFile.Size.Height * xidx + yidx) * 100) / expectedSlicedTiles;
@@ -82,8 +80,7 @@ namespace Tiled2Dmap.CLI.ImageServices
         }
         public void Dispose()
         {
-            if(_image != null ) _image.Dispose();
-            if (_graphic != null) _graphic.Dispose();
+            if(Image != null ) Image.Dispose();
         }
     }
 }

@@ -1,11 +1,13 @@
-﻿using ImageMagick;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using SixLabors.ImageSharp.PixelFormats;
 using System;
-using System.Drawing;
 using System.IO;
 using Tiled2Dmap.CLI.Dmap;
 using Tiled2Dmap.CLI.Tiled;
 using Tiled2Dmap.CLI.Utility;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
+using BCnEncoder.Encoder;
 
 namespace Tiled2Dmap.CLI.ImageHelp
 {
@@ -22,34 +24,44 @@ namespace Tiled2Dmap.CLI.ImageHelp
         private readonly string _name;
         private readonly string _projectDirectory;
         private readonly CordConverter _cordConverter;
+        private readonly Image<Rgba32> _tileMask;
 
-        private readonly IMagickImage<byte> _tilemask;
-        private readonly IMagickImage<byte> _puzzleBackground;
+        private Image<Rgba32> backgroundImage;
 
         public int TileWidth { get; set; }
         public int TileHeight { get; set; }
         public int TileCountWidth { get; set; }
         public int TileCountHeight { get; set; }
 
-        public IsometricSlice (ILogger<IsometricSlice> logger, string name, string projectDirectory, Bitmap image, CordConverter coordConverter)
+        public IsometricSlice(ILogger<IsometricSlice> logger, string name, string projectDirectory, Image<Rgba32> image, CordConverter cordConverter)
         {
             _logger = logger;
             _name = name;
             _projectDirectory = projectDirectory;
-            _cordConverter= coordConverter;
+            _cordConverter = cordConverter;
 
-            MagickImageFactory imageFactory = new();
+            backgroundImage= image;
 
             //Determine the size of tile needed. Some maps don't support using a 256x128 tile.
-            if(image.Width % 256 == 0 && image.Height % 256 == 0)
+            if (image.Width % 256 == 0 && image.Height % 256 == 0)
             {
-                _tilemask = imageFactory.Create(Resources.diamond_256x128);
+                using (var ms = new MemoryStream())
+                {
+                    Resources.diamond_256x128.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
+                    ms.Seek(0, SeekOrigin.Begin);
+                    _tileMask = Image<Rgba32>.Load<Rgba32>(ms);
+                }
                 TileWidth = 256;
                 TileHeight = 128;
             }
-            else if(image.Width % 128 == 0 && image.Height % 128 == 0)
+            else if (image.Width % 128 == 0 && image.Height % 128 == 0)
             {
-                _tilemask = imageFactory.Create(Resources.diamond_128x64);
+                using (var ms = new MemoryStream())
+                {
+                    Resources.diamond_128x64.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
+                    ms.Seek(0, SeekOrigin.Begin);
+                    _tileMask = Image<Rgba32>.Load<Rgba32>(ms);
+                }
                 TileWidth = 128;
                 TileHeight = 64;
 
@@ -62,11 +74,10 @@ namespace Tiled2Dmap.CLI.ImageHelp
 
             _logger.LogDebug("Isometric tile size is: {0}, {1}", TileWidth, TileHeight);
 
-            _puzzleBackground = imageFactory.Create(image);
-
             //Determine the size of the tile map, based on the tile size.
             TileCountWidth = _cordConverter.dmapSize.Width / (TileHeight / Constants.DmapTileHeight);
             TileCountHeight = _cordConverter.dmapSize.Height / (TileWidth / Constants.DmapTileWidth);
+
             _logger.LogDebug("Number of tiles is: {0}, {1}", TileCountWidth, TileCountHeight);
         }
 
@@ -87,17 +98,26 @@ namespace Tiled2Dmap.CLI.ImageHelp
                     WidthTiles = TileCountWidth,
                     HeightTiles = TileCountHeight
                 },
-                TileWidth= TileWidth,
-                TileHeight= TileHeight
+                TileWidth = TileWidth,
+                TileHeight = TileHeight
             };
 
             result.TileLayer.Data = new int[TileCountWidth * TileCountHeight];
 
             //Define the bounds of the actual background before extending.
-            Rectangle backgroundRect = new Rectangle(_tilemask.Width / 2, _tilemask.Height, _puzzleBackground.Width, _puzzleBackground.Height);
+            System.Drawing.Rectangle backgroundRect = new(_tileMask.Width / 2, _tileMask.Height / 2, backgroundImage.Width, backgroundImage.Height);
 
-            //Add padding around the whole background image so we can slice partial tiles.
-            _puzzleBackground.Extent(_puzzleBackground.Width + _tilemask.Width, _puzzleBackground.Height + _tilemask.Height, Gravity.Center, MagickColors.Transparent);
+            //Add padding around the whole background backgroundImage so we can slice partial tiles.
+            backgroundImage.Mutate(x =>
+            {
+                x.Pad(backgroundImage.Width + _tileMask.Width, backgroundImage.Height + _tileMask.Height);
+            });
+
+            //Create an backgroundImage to reuse
+            using Image<Rgba32> tileSubImage = new Image<Rgba32>(_tileMask.Width, _tileMask.Height);
+
+            //Setup the graphics options for the masking.
+            var options = new GraphicsOptions { AlphaCompositionMode = PixelAlphaCompositionMode.DestIn };
 
             //Setup total tracking.
             int expectedPieces = TileCountHeight * TileCountWidth;
@@ -107,47 +127,53 @@ namespace Tiled2Dmap.CLI.ImageHelp
 
             int tileIdx = 0;
 
+
             for (int xidx = 0, tiledX = 0; xidx < _cordConverter.dmapSize.Width; xidx += TileWidth / Constants.DmapTileWidth, tiledX++)
             {
                 for (int yidx = 0, tiledY = 0; yidx < _cordConverter.dmapSize.Width; yidx += TileHeight / Constants.DmapTileHeight, tiledY++)
                 {
                     //Get the center of the dmap cell
-                    Point cellCenter = _cordConverter.Cell2Bg(new Point(xidx, yidx));
+                    System.Drawing.Point cellCenter = _cordConverter.Cell2Bg(new System.Drawing.Point(xidx, yidx));
 
-                    Rectangle subImageRect = new Rectangle(cellCenter, new System.Drawing.Size(_tilemask.Width, _tilemask.Height));
+                    System.Drawing.Rectangle subImageRect = new(cellCenter, new System.Drawing.Size(_tileMask.Width, _tileMask.Height));
 
                     //Adjust location for larger tile ---can't remember why I'm doing this...
                     subImageRect.Y += (TileHeight / 2) - (Constants.DmapTileHeight / 2);
 
-                    //We only care about this subimage is it covers the background image.
+                    //We only care about this subimage is it covers the background backgroundImage.
                     if (subImageRect.IntersectsWith(backgroundRect))
                     {
-                        using(var tileImage = _puzzleBackground.Clone(subImageRect.X, subImageRect.Y, subImageRect.Width, subImageRect.Height))
+                        backgroundImage.SubImage(tileSubImage, new(subImageRect.X, subImageRect.Y));
+
+                        tileSubImage.Mutate(x =>
                         {
-                            tileImage.Composite(_tilemask, CompositeOperator.DstIn);
+                            x.DrawImage(_tileMask, options);
+                        });
 
-                            string imgSavePath = $"{Path.Combine(_projectDirectory, "tiled", _name)}/img{tileIdx}.png";
-                            string imgRelativePath = Path.GetRelativePath(Path.Combine(_projectDirectory, "tiled"), imgSavePath);
 
-                            result.TileSetFile.Tiles.Add(new Tiled.Tile()
-                            {
-                                Id = tileIdx,
-                                ImageWidth = TileWidth,
-                                ImageHeight = TileHeight,
-                                Image = imgRelativePath
-                            });
 
-                            result.TileLayer.Data[tiledX + (tiledY * result.TileLayer.WidthTiles)] = tileIdx + result.TileSetFile.FirstGId;
+                        string imgSavePath = $"{Path.Combine(_projectDirectory, "tiled", _name)}/img{tileIdx}.png";
+                        string imgRelativePath = Path.GetRelativePath(Path.Combine(_projectDirectory, "tiled"), imgSavePath);
 
-                            tileIdx++;
+                        result.TileSetFile.Tiles.Add(new Tiled.Tile()
+                        {
+                            Id = tileIdx,
+                            ImageWidth = TileWidth,
+                            ImageHeight = TileHeight,
+                            Image = imgRelativePath
+                        });
 
-                            tileImage.Write(imgSavePath);
-                        }
+                        result.TileLayer.Data[tiledX + (tiledY * result.TileLayer.WidthTiles)] = tileIdx + result.TileSetFile.FirstGId;
+
+                        tileIdx++;
+
+                        tileSubImage.SaveAsPng(imgSavePath);
+                        
                     }
 
                     if (progress.Increment(1))
                         _logger.LogInformation("Slicing image...{0:000}%", progress.Progress);
-                    
+
                 }
             }
 
@@ -157,8 +183,8 @@ namespace Tiled2Dmap.CLI.ImageHelp
         }
         public void Dispose()
         {
-            if(_tilemask != null) { _tilemask.Dispose(); }
-            if(_puzzleBackground != null) { _puzzleBackground.Dispose(); }
+            if(_tileMask != null) { _tileMask.Dispose(); }
+            if(backgroundImage != null) { backgroundImage.Dispose(); }
         }
     }
 }

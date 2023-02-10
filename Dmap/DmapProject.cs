@@ -3,15 +3,15 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Tiled2Dmap.CLI.Tiled;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Drawing;
-using System.Security.Cryptography;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using Tiled2Dmap.CLI.Utility;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using Tiled2Dmap.CLI.ImageHelp;
+using Tiled2Dmap.CLI.ImageServices;
+using SixLabors.ImageSharp;
 
 namespace Tiled2Dmap.CLI.Dmap
 {
@@ -28,17 +28,17 @@ namespace Tiled2Dmap.CLI.Dmap
         private readonly string _projectDirectory;
         private readonly string _projectName;
         private readonly string _mapName;
-        public DmapProject(ILogger<DmapProject> logger, string ProjectDirectory, string MapName = "")
+        public DmapProject(ILogger<DmapProject> logger, string projectDirectory, string mapName = "")
         {
             _logger = logger;
 
-            this._projectDirectory = ProjectDirectory;
-            this._projectName = new DirectoryInfo(ProjectDirectory).Name;
+            _projectDirectory = projectDirectory;
+            _projectName = new DirectoryInfo(projectDirectory).Name;
 
-            if (MapName == "") 
-                MapName = this._projectName;
+            if (mapName == "") 
+                mapName = this._projectName;
 
-            this._mapName = MapName;
+            _mapName = mapName;
 
             #region Setup Json Options
             jsOptions = new JsonSerializerOptions()
@@ -376,7 +376,7 @@ namespace Tiled2Dmap.CLI.Dmap
             DmapFile.Save(DmapDirectory);
         }
 
-        private System.Drawing.Rectangle GetPuzzleRect(System.Drawing.Size mapSize, System.Drawing.Size tileSize, int[] tileData)
+        private Rectangle GetPuzzleRect(Size mapSize, Size tileSize, int[] tileData)
         {
             int top = int.MaxValue, right = int.MinValue, bottom = int.MinValue, left = int.MaxValue;
 
@@ -422,24 +422,24 @@ namespace Tiled2Dmap.CLI.Dmap
             return new(left, top, right - left, bottom - top);
         }
 
-        private System.Drawing.Size GetPuzzleSizeAdder(System.Drawing.Size mapSize, System.Drawing.Size tileSize, int puzzlePieceSize)
+        private Size GetPuzzleSizeAdder(Size mapSize, Size tileSize, int puzzlePieceSize)
         {
             //If it is already divisible by return 0,0
             if(IsEquallyDivisible(mapSize, puzzlePieceSize)) return new(0, 0);
 
             //check to see if its divisible by the puzzlePieceSize if we subtract a tileSize
 
-            System.Drawing.Size tempSize = new(mapSize.Width - tileSize.Width, mapSize.Height - tileSize.Height);
+            Size tempSize = mapSize - tileSize;
 
-            if (IsEquallyDivisible(tempSize, puzzlePieceSize)) return new (tileSize.Width * -1, tileSize.Height * -1);
+            if (IsEquallyDivisible(tempSize, puzzlePieceSize)) return tileSize * -1;
 
             //Determine how much larger it needs to be made to make it divisible.
             int deltaWidth = (puzzlePieceSize - (mapSize.Width % puzzlePieceSize)) % puzzlePieceSize;
             int deltaHeight = (puzzlePieceSize - (mapSize.Height % puzzlePieceSize)) % puzzlePieceSize;
 
-            return new(deltaWidth, deltaHeight);
+            return new Size(deltaWidth, deltaHeight);
         }
-        private bool IsEquallyDivisible(System.Drawing.Size mapSize, int divisor)
+        private bool IsEquallyDivisible(Size mapSize, int divisor)
         {
             return mapSize.Width % divisor == 0 && mapSize.Height % divisor == 0;
         }
@@ -454,7 +454,7 @@ namespace Tiled2Dmap.CLI.Dmap
             TileLayer puzzleLayer = (TileLayer)mainMap.GetLayer("background");
 
             //Size of the isometric tiles.
-            System.Drawing.Size tileSize = new ();
+            Size tileSize = new ();
 
             bool sizeSet = false;
             for(int yidx = 0; yidx < puzzleLayer.HeightTiles; yidx++)//Iterate isometric tile positions to find puzzle size.
@@ -475,13 +475,13 @@ namespace Tiled2Dmap.CLI.Dmap
             }
 
             //Size of the resulting image. 
-            System.Drawing.Rectangle boundingRect = GetPuzzleRect(new System.Drawing.Size(puzzleLayer.WidthTiles, puzzleLayer.HeightTiles), tileSize, puzzleLayer.Data);
-            System.Drawing.Size extendedBackgroundSize = boundingRect.Size;
+            Rectangle boundingRect = GetPuzzleRect(new Size(puzzleLayer.WidthTiles, puzzleLayer.HeightTiles), tileSize, puzzleLayer.Data);
+            Size extendedBackgroundSize = boundingRect.Size;
 
             //Add an extended border around the background, of an additional tile.
             extendedBackgroundSize += tileSize;
 
-            System.Drawing.Point puzzleOffset = boundingRect.Location;
+            Point puzzleOffset = boundingRect.Location;
 
             #region Determine Size
             ///Need to determine the size of the background puzzle based on where the first defined tile is.
@@ -493,46 +493,50 @@ namespace Tiled2Dmap.CLI.Dmap
             _logger.LogInformation("Stitching Background from isometric tiles");
 
             int expectedSlicedTiles = puzzleLayer.WidthTiles * puzzleLayer.HeightTiles;
-            ProgressBar stitchProgress = new(expectedSlicedTiles, 10);
+            Utility.ProgressBar stitchProgress = new(expectedSlicedTiles, 10);
 
             _logger.LogInformation("Stitching Puzzle File...{0:000}%", stitchProgress.Progress);
 
             Stopwatch sw1 = Stopwatch.StartNew();
 
-            using Bitmap backgroundBmp = new(extendedBackgroundSize.Width, extendedBackgroundSize.Height);
-            using (Graphics graphic = Graphics.FromImage(backgroundBmp))
+            using SixLabors.ImageSharp.Image<Rgba32> backgroundImageIS = new(extendedBackgroundSize.Width, extendedBackgroundSize.Height);
+
+
+            for (int yidx = 0; yidx < puzzleLayer.HeightTiles; yidx++)//Iterate isometric tile positions.
             {
-                for (int yidx = 0; yidx < puzzleLayer.HeightTiles; yidx++)//Iterate isometric tile positions.
+                for (int xidx = 0; xidx < puzzleLayer.WidthTiles; xidx++)
                 {
-                    for (int xidx = 0; xidx < puzzleLayer.WidthTiles; xidx++)
+                    int tileId = puzzleLayer.Data[xidx + (yidx * puzzleLayer.WidthTiles)];
+                    if (tileId == 0) continue;//No tile set.
+
+                    TiledTile tile = mainMap.GetTile(TiledDirectory, tileId, jsOptions);
+
+                    if (tile.Type == "animatedtile")
                     {
-                        int tileId = puzzleLayer.Data[xidx + (yidx * puzzleLayer.WidthTiles)];
-                        if (tileId == 0) continue;//No tile set.
-
-                        TiledTile tile = mainMap.GetTile(TiledDirectory, tileId, jsOptions);
-
-                        if (tile.Type == "animatedtile")
-                        {
-                            _logger.LogError("Animated tiles not supported on background");
-                            throw new Exception("Animated tiles not supported on backgrond");
-                        }
-
-                        string imgPath = (tile as Tiled.Tile).Image;
-                        using (Bitmap tileBmp = new Bitmap(Path.Combine(TiledDirectory, imgPath)))
-                        {
-                            //(Iso X world origin + tile offset - tildwidth offset)
-                            int wx = (puzzleLayer.WidthTiles * tileSize.Width / 2) + ((xidx - yidx) * tileSize.Width / 2) - tileSize.Width / 2;
-                            int wy = (xidx + yidx) * tileSize.Height/ 2;
-                            int px = wx - puzzleOffset.X + tileSize.Width / 2; //World to Puzzle + offset for extended border.
-                            int py = wy - puzzleOffset.Y + tileSize.Height / 2;//World to Puzzle + offset for extended border.
-
-                            graphic.DrawImage(tileBmp, new Point(px, py));
-                        }
-                        if(stitchProgress.Increment(1))
-                            _logger.LogInformation("Stitching Puzzle File...{0:000}%", stitchProgress.Progress);
+                        _logger.LogError("Animated tiles not supported on background");
+                        throw new Exception("Animated tiles not supported on backgrond");
                     }
+
+                    string imgPath = (tile as Tiled.Tile).Image;
+
+                    using var puzzlePiece = Image.Load(imgPath);
+
+                    //(Iso X world origin + tile offset - tildwidth offset)
+                    int wx = (puzzleLayer.WidthTiles * tileSize.Width / 2) + ((xidx - yidx) * tileSize.Width / 2) - tileSize.Width / 2;
+                    int wy = (xidx + yidx) * tileSize.Height / 2;
+                    int px = wx - puzzleOffset.X + tileSize.Width / 2; //World to Puzzle + offset for extended border.
+                    int py = wy - puzzleOffset.Y + tileSize.Height / 2;//World to Puzzle + offset for extended border.
+
+                    backgroundImageIS.Mutate(x =>
+                    {
+                        x.DrawImage(puzzlePiece, new Point(px,py), 1);
+                    });
+                    
+                    if (stitchProgress.Increment(1))
+                        _logger.LogInformation("Stitching Puzzle File...{0:000}%", stitchProgress.Progress);
                 }
             }
+
             sw1.Stop();
 
             _logger.LogInformation("Stitching Puzzle File completed in {0} seconds",sw1.Elapsed.TotalSeconds);
@@ -541,18 +545,24 @@ namespace Tiled2Dmap.CLI.Dmap
             //Slice all puzzle pieces to be 256. I don't see a reason to continue to support 128.
             int puzzleSize = 256;
 
-            System.Drawing.Size sizeAdder = GetPuzzleSizeAdder(backgroundBmp.Size, tileSize, puzzleSize);
-
+            Size sizeAdder = GetPuzzleSizeAdder(new(backgroundImageIS.Width, backgroundImageIS.Height), tileSize, puzzleSize);
             //The image may need to be made smaller or larger depending on the sizeAdder.
-
-            ////TODO
-            ////
-            ///
+            if(sizeAdder.Width < 0 || sizeAdder.Height < 0)
+            {
+                //Need to crop the image.
+                backgroundImageIS.Mutate(x =>
+                {
+                    x.Crop(new(sizeAdder.Width / 2, sizeAdder.Height / 2, backgroundImageIS.Width - sizeAdder.Width, backgroundImageIS.Height - sizeAdder.Height));
+                });
+            }
+            else if(sizeAdder.Width > 0 || sizeAdder.Height > 0)
+            {
+                backgroundImageIS.Mutate(x =>
+                {
+                    x.Pad(backgroundImageIS.Width + sizeAdder.Width, backgroundImageIS.Height + sizeAdder.Height);
+                });
+            }
             
-            using Bitmap trimBmp = backgroundBmp.Clone(new Rectangle(sizeAdder.Width/ 2, sizeAdder.Height / 2, backgroundBmp.Width - sizeAdder.Width, backgroundBmp.Height - sizeAdder.Height), backgroundBmp.PixelFormat);
-
-            backgroundBmp.Dispose();
-
             System.Drawing.Size puzzleTileSize = new(puzzleSize, puzzleSize);
 
 
@@ -562,8 +572,8 @@ namespace Tiled2Dmap.CLI.Dmap
             {
                 Size = new()
                 {
-                    Width = (uint)(trimBmp.Width / puzzleTileSize.Width),
-                    Height = (uint)(trimBmp.Height / puzzleTileSize.Height)
+                    Width = (uint)(backgroundImageIS.Width / puzzleTileSize.Width),
+                    Height = (uint)(backgroundImageIS.Height / puzzleTileSize.Height)
                 },
                 AniFile = aniFile.AniFilePath,
                 Header = "PUZZLE2",
@@ -580,7 +590,9 @@ namespace Tiled2Dmap.CLI.Dmap
             _logger.LogInformation("Slicing background into puzzle pieces");
 
             expectedSlicedTiles = (int)puzzleFile.Size.Width * (int)puzzleFile.Size.Height;
-            ProgressBar sliceProgress = new(expectedSlicedTiles, 10);
+            Utility.ProgressBar sliceProgress = new(expectedSlicedTiles, 10);
+
+            using SixLabors.ImageSharp.Image<Rgba32> puzzleSlice = new(puzzleTileSize.Width, puzzleTileSize.Height);
             
             _logger.LogInformation("Slicing Puzzle File...{0:000}%", sliceProgress.Progress);
             sw1 = Stopwatch.StartNew();
@@ -591,26 +603,27 @@ namespace Tiled2Dmap.CLI.Dmap
             {
                 for(int xidx = 0; xidx < puzzleFile.Size.Width; xidx++)
                 {
-                    using (Bitmap puzzBmp = trimBmp.Clone(new Rectangle(xidx * puzzleTileSize.Width, yidx * puzzleTileSize.Height, puzzleTileSize.Width, puzzleTileSize.Height), trimBmp.PixelFormat))
+                    backgroundImageIS.SubImage(puzzleSlice, new(xidx * puzzleTileSize.Width, yidx * puzzleTileSize.Height));
+
+                    string hash = ImageHash.GetImageHash(puzzleSlice);
+                    int thisIdx = 0;
+                    if(!imgHashMap.TryGetValue(hash, out thisIdx))
                     {
-                        string hash = ImageServices.ImageHash.GetImageHash(puzzBmp);
-                        int thisIdx = 0;
-                        if(!imgHashMap.TryGetValue(hash, out thisIdx))
-                        {
-                            thisIdx = puzzleIdx++;
-                            imgHashMap.Add(hash, thisIdx);
+                        thisIdx = puzzleIdx++;
+                        imgHashMap.Add(hash, thisIdx);
 
-                            Ani tmpAni = new();
-                            tmpAni.Name = $"Puzzle{thisIdx}";
-                            string relativeFramePath = Path.Combine(relativeResourcePath, $"{puzzleIdx}.dds"); 
-                            tmpAni.Frames.Enqueue(relativeFramePath);
+                        Ani tmpAni = new();
+                        tmpAni.Name = $"Puzzle{thisIdx}";
+                        string relativeFramePath = Path.Combine(relativeResourcePath, $"{puzzleIdx}.dds"); 
+                        tmpAni.Frames.Enqueue(relativeFramePath);
 
-                            //Convert and save dds to anipath.
-                            ImageServices.DDSConvert.PngToDDS(puzzBmp, Path.Combine(DmapDirectory, relativeFramePath));
-                            aniFile.Anis.Add(tmpAni.Name, tmpAni);
-                        }
-                        puzzleFile.PuzzleTiles[xidx, yidx] = (ushort)thisIdx;
+                        //Convert and save dds to anipath.
+                        DDSConvert.SaveDds(puzzleSlice, File.OpenWrite(Path.Combine(DmapDirectory, relativeFramePath)));
+
+                        aniFile.Anis.Add(tmpAni.Name, tmpAni);
                     }
+                    puzzleFile.PuzzleTiles[xidx, yidx] = (ushort)thisIdx;
+                    
                     if(sliceProgress.Increment(1))
                         _logger.LogInformation("Slicing Puzzle File...{0:000}%", sliceProgress.Progress);
                 }

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using ImageMagick;
 using System.Text.Json.Serialization;
 using Tiled2Dmap.CLI.Dmap;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -47,10 +46,10 @@ namespace Tiled2Dmap.CLI.Tiled
             return tileSetFile.Tiles[TileId];
         }
 
-        public Size GetTileSize(string TiledDirectory, int TileId, JsonSerializerOptions JSONOptions)
+        public SixLabors.ImageSharp.Size GetTileSize(string TiledDirectory, int TileId, JsonSerializerOptions JSONOptions)
         {
             var tileSet = getTileSet(TiledDirectory, TileId, JSONOptions);
-            return new Size(tileSet.TileWidth, tileSet.TileHeight);
+            return new SixLabors.ImageSharp.Size(tileSet.TileWidth, tileSet.TileHeight);
         }
 
         private TileSetFile getTileSet(string TiledDirectory, int TileId, JsonSerializerOptions JSONOptions)

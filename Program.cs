@@ -1,6 +1,9 @@
 ﻿using Cocona;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Text.Json;
@@ -152,12 +155,12 @@ namespace Tiled2Dmap.CLI
             Utility.ClientResources clientResources = new(ConquerDirectory);
             DmapFile dmapFile = new(dmapPath, ConquerDirectory);
             //Get full path to allow relative output paths.
+
             output = Path.GetFullPath(output);
-            
-            using (var stitch = new ImageServices.Stitch(clientResources, new PuzzleFile(ConquerDirectory, dmapFile.PuzzleFile)))
-            {
-                stitch.Image.Save(output);
-            }
+
+            using var stitch = new ImageServices.Stitch(clientResources, new PuzzleFile(ConquerDirectory, dmapFile.PuzzleFile));
+
+            stitch.Image.SaveAsPng(output);
 
         }
 
@@ -287,116 +290,116 @@ namespace Tiled2Dmap.CLI
         }
 
         //test-parse-scene --client D:\Programming\Conquer\Clients\5165
-        [Command]
-        public void TestParseScene(
-            [Option("client", Description = "Conquer Client Root Directory")][DirectoryExists] string ConquerDirectory
-            )
-        {
-            Utility.ClientResources clientResources = new(ConquerDirectory);
-            Console.WriteLine($"Loading All Scene Files in {Path.Combine(ConquerDirectory, @"map/Scene")}");
-            Dictionary<string, AniFile> aniFileCache = new();
-            foreach (string file in Directory.GetFiles(Path.Combine(ConquerDirectory, @"map/Scene"), "*.scene"))
-            {
-                var scene = new SceneFile(ConquerDirectory, file);
+        //[Command]
+        //public void TestParseScene(
+        //    [Option("client", Description = "Conquer Client Root Directory")][DirectoryExists] string ConquerDirectory
+        //    )
+        //{
+        //    Utility.ClientResources clientResources = new(ConquerDirectory);
+        //    Console.WriteLine($"Loading All Scene Files in {Path.Combine(ConquerDirectory, @"map/Scene")}");
+        //    Dictionary<string, AniFile> aniFileCache = new();
+        //    foreach (string file in Directory.GetFiles(Path.Combine(ConquerDirectory, @"map/Scene"), "*.scene"))
+        //    {
+        //        var scene = new SceneFile(ConquerDirectory, file);
 
-                int left = 0;
-                int top = 0;
-                int right = 0;
-                int bottom = 0;
+        //        int left = 0;
+        //        int top = 0;
+        //        int right = 0;
+        //        int bottom = 0;
 
-                foreach(var spart in scene.SceneParts)
-                {
-                    try
-                    {
-                        AniFile aniFile;
-                        if (!aniFileCache.TryGetValue(spart.AniPath, out aniFile))
-                        {
-                            aniFile = new AniFile(ConquerDirectory, spart.AniPath);
-                            aniFileCache.Add(spart.AniPath, aniFile);
-                        }
-                        Ani ani = aniFile.Anis[spart.AniName];
-                        if (ani.Frames.Count > 1)
-                            Log.Info("Scene Part has animated frame");
-                        using (Bitmap sceneBmp = ImageServices.DDSConvert.StreamToPng(clientResources.GetFile(ani.Frames.Peek().Replace(".msk", ".dds").Replace(".MSK", ".dds"))))
-                        {
-                            Console.WriteLine($"ScenePart: {spart.AniPath}-{spart.AniName} Position {spart.TileOffset.X},{spart.TileOffset.Y} Offset {spart.PixelLocation.X},{spart.PixelLocation.Y}");
-                            //Need to compensate for tile position
-                            int isoX = spart.TileOffset.X * Constants.DmapTileHeight * -1;
-                            int isoY = spart.TileOffset.Y * Constants.DmapTileHeight * -1;
-                            int orthoX = isoY - isoX;
-                            int orthoY = (int)(0.5 * (isoY + isoX));
-                            orthoX += spart.PixelLocation.X;
-                            orthoY -= spart.PixelLocation.Y;
+        //        foreach(var spart in scene.SceneParts)
+        //        {
+        //            try
+        //            {
+        //                AniFile aniFile;
+        //                if (!aniFileCache.TryGetValue(spart.AniPath, out aniFile))
+        //                {
+        //                    aniFile = new AniFile(ConquerDirectory, spart.AniPath);
+        //                    aniFileCache.Add(spart.AniPath, aniFile);
+        //                }
+        //                Ani ani = aniFile.Anis[spart.AniName];
+        //                if (ani.Frames.Count > 1)
+        //                    Log.Info("Scene Part has animated frame");
+        //                using (Bitmap sceneBmp = ImageServices.DDSConvert.StreamToPng(clientResources.GetFile(ani.Frames.Peek().Replace(".msk", ".dds").Replace(".MSK", ".dds"))))
+        //                {
+        //                    Console.WriteLine($"ScenePart: {spart.AniPath}-{spart.AniName} Position {spart.TileOffset.X},{spart.TileOffset.Y} Offset {spart.PixelLocation.X},{spart.PixelLocation.Y}");
+        //                    //Need to compensate for tile position
+        //                    int isoX = spart.TileOffset.X * Constants.DmapTileHeight * -1;
+        //                    int isoY = spart.TileOffset.Y * Constants.DmapTileHeight * -1;
+        //                    int orthoX = isoY - isoX;
+        //                    int orthoY = (int)(0.5 * (isoY + isoX));
+        //                    orthoX += spart.PixelLocation.X;
+        //                    orthoY -= spart.PixelLocation.Y;
 
 
-                            if (orthoX < left) left = orthoX;
-                            if (orthoY < top) top = orthoY;
-                            if ((orthoX + sceneBmp.Width) > right) right = (orthoX + sceneBmp.Width);
-                            if ((orthoY + sceneBmp.Height) > bottom) bottom = (orthoY + sceneBmp.Height);
-                        }
-                    }
-                    catch(KeyNotFoundException knfe)
-                    {
-                        Log.Warn($"Could not find ani entry in {spart.AniPath} entry {spart.AniName}");
-                    }
-                    catch(FileNotFoundException fnfe)
-                    {
-                        Log.Warn(fnfe.Message);
-                    }
-                }
-                int totalWidth = 1627;//right - left;
-                int totalHeight = 915;// bottom - top;
-                Log.Info($"");
-                using (Bitmap totalScene = new(totalWidth, totalHeight))
-                using (Graphics graphic = Graphics.FromImage(totalScene))
-                {
-                    Log.Info($"Total Scene Size: {totalScene.Width}, {totalScene.Height}");
-                    foreach (var spart in scene.SceneParts)
-                    {
-                        try
-                        {
-                            AniFile aniFile;
-                            if (!aniFileCache.TryGetValue(spart.AniPath, out aniFile))
-                            {
-                                aniFile = new AniFile(ConquerDirectory, spart.AniPath);
-                                aniFileCache.Add(spart.AniPath, aniFile);
-                            }
-                            Ani ani = aniFile.Anis[spart.AniName];
-                            if (ani.Frames.Count > 1)
-                                Log.Info("Scene Part has animated frame");
-                            using (Bitmap sceneBmp = ImageServices.DDSConvert.StreamToPng(clientResources.GetFile(ani.Frames.Peek().Replace(".msk", ".dds").Replace(".MSK", ".dds"))))
-                            {
-                                int isoX = spart.TileOffset.X * Constants.DmapTileHeight * -1;
-                                int isoY = spart.TileOffset.Y * Constants.DmapTileHeight * -1;
-                                int orthoX = isoY - isoX;
-                                int orthoY = (int)(0.5 * (isoY + isoX));
-                                orthoX += spart.PixelLocation.X;
-                                orthoY -= spart.PixelLocation.Y;
-                                orthoY = totalScene.Height - orthoY;
-                                orthoX -= left;
-                                orthoY += top;
-                                orthoY -= 155;
-                                Log.Info($"Drawing {spart.AniName} at {orthoX},{orthoY}");
-                                graphic.DrawImage(sceneBmp, new Point(orthoX, orthoY));
-                            }
-                        }
+        //                    if (orthoX < left) left = orthoX;
+        //                    if (orthoY < top) top = orthoY;
+        //                    if ((orthoX + sceneBmp.Width) > right) right = (orthoX + sceneBmp.Width);
+        //                    if ((orthoY + sceneBmp.Height) > bottom) bottom = (orthoY + sceneBmp.Height);
+        //                }
+        //            }
+        //            catch(KeyNotFoundException knfe)
+        //            {
+        //                Log.Warn($"Could not find ani entry in {spart.AniPath} entry {spart.AniName}");
+        //            }
+        //            catch(FileNotFoundException fnfe)
+        //            {
+        //                Log.Warn(fnfe.Message);
+        //            }
+        //        }
+        //        int totalWidth = 1627;//right - left;
+        //        int totalHeight = 915;// bottom - top;
+        //        Log.Info($"");
+        //        using (Bitmap totalScene = new(totalWidth, totalHeight))
+        //        using (Graphics graphic = Graphics.FromImage(totalScene))
+        //        {
+        //            Log.Info($"Total Scene Size: {totalScene.Width}, {totalScene.Height}");
+        //            foreach (var spart in scene.SceneParts)
+        //            {
+        //                try
+        //                {
+        //                    AniFile aniFile;
+        //                    if (!aniFileCache.TryGetValue(spart.AniPath, out aniFile))
+        //                    {
+        //                        aniFile = new AniFile(ConquerDirectory, spart.AniPath);
+        //                        aniFileCache.Add(spart.AniPath, aniFile);
+        //                    }
+        //                    Ani ani = aniFile.Anis[spart.AniName];
+        //                    if (ani.Frames.Count > 1)
+        //                        Log.Info("Scene Part has animated frame");
+        //                    using (Bitmap sceneBmp = ImageServices.DDSConvert.StreamToPng(clientResources.GetFile(ani.Frames.Peek().Replace(".msk", ".dds").Replace(".MSK", ".dds"))))
+        //                    {
+        //                        int isoX = spart.TileOffset.X * Constants.DmapTileHeight * -1;
+        //                        int isoY = spart.TileOffset.Y * Constants.DmapTileHeight * -1;
+        //                        int orthoX = isoY - isoX;
+        //                        int orthoY = (int)(0.5 * (isoY + isoX));
+        //                        orthoX += spart.PixelLocation.X;
+        //                        orthoY -= spart.PixelLocation.Y;
+        //                        orthoY = totalScene.Height - orthoY;
+        //                        orthoX -= left;
+        //                        orthoY += top;
+        //                        orthoY -= 155;
+        //                        Log.Info($"Drawing {spart.AniName} at {orthoX},{orthoY}");
+        //                        graphic.DrawImage(sceneBmp, new System.Drawing.Point(orthoX, orthoY));
+        //                    }
+        //                }
 
-                        catch (KeyNotFoundException knfe)
-                        {
-                            Log.Warn($"Could not find ani entry in {spart.AniPath} entry {spart.AniName}");
-                        }
-                        catch (FileNotFoundException fnfe)
-                        {
-                            Log.Warn(fnfe.Message);
-                        }
-                    }
-                    totalScene.Save($"C:/Temp/Scenes/{Path.GetFileNameWithoutExtension(file)}.png");
-                    break;
+        //                catch (KeyNotFoundException knfe)
+        //                {
+        //                    Log.Warn($"Could not find ani entry in {spart.AniPath} entry {spart.AniName}");
+        //                }
+        //                catch (FileNotFoundException fnfe)
+        //                {
+        //                    Log.Warn(fnfe.Message);
+        //                }
+        //            }
+        //            totalScene.Save($"C:/Temp/Scenes/{Path.GetFileNameWithoutExtension(file)}.png");
+        //            break;
 
-                }
+        //        }
 
-            }
-        }
+        //    }
+        //}
 
         [Command]
         public void TestStitch(
@@ -421,67 +424,7 @@ namespace Tiled2Dmap.CLI
                 }
             }
         }
-        [Command]
-        public void TestScaleStitch(
-            [Argument("directory", Description = "Conquer Client Root Directory")][DirectoryExists] string ConquerDirectory,
-            [Argument("output", Description = "Output Directory")][DirectoryExists] string OutputDirectory
-            )
-        {
-            string gamemapdat = Path.Combine(ConquerDirectory, "ini/GameMap.dat");
-            if (File.Exists(gamemapdat))
-            {
-                Utility.ClientResources clientResources = new(ConquerDirectory);
 
-
-                List<string> dmapsExported = new();
-                foreach(string file in Directory.GetFiles(OutputDirectory))
-                {
-                    string name = Path.GetFileNameWithoutExtension(file);
-                    dmapsExported.Add(name);
-                }
-                dmapsExported.Add("island-snail");
-                dmapsExported.Add("canyon-fairy");
-                dmapsExported.Add("Gulf");
-                dmapsExported.Add("halloween02");
-
-                using (BinaryReader reader = new BinaryReader(File.OpenRead(gamemapdat)))
-                {
-                    uint mapCnt = reader.ReadUInt32();
-                    for (int i = 0; i < mapCnt; i++)
-                    {
-                        uint mapId = reader.ReadUInt32();
-                        string dMap = reader.ReadASCIIString(reader.ReadInt32());
-                        uint pieceSize = reader.ReadUInt32();
-
-                        string dmapPath = Path.Combine(ConquerDirectory, dMap);
-
-
-                        if (!File.Exists(dmapPath)) continue;
-                        try
-                        {
-                            DmapFile dmapFile = new(dmapPath, ConquerDirectory);
-
-                            string rootName = Path.GetFileNameWithoutExtension(dmapPath);
-                            if (dmapsExported.Contains(rootName)) continue;
-
-                            string outputpath = Path.Combine(OutputDirectory, $"{rootName}.png");
-
-                            using (var stitch = new ImageServices.Stitch(clientResources, new PuzzleFile(ConquerDirectory, dmapFile.PuzzleFile)))
-                            {
-                                using (Bitmap scaled = new Bitmap(stitch.Image, new Size((int)(stitch.Image.Width * .05), (int)(stitch.Image.Height * .05))))
-                                {
-                                    scaled.Save(outputpath);
-                                    dmapsExported.Add(rootName);
-                                }
-                            }
-                        }
-                        catch (Exception e) { }
-                    }
-                }
-            }
-            else
-                Log.Error($"{gamemapdat} not found");
-        }
         [Command]
         public void TestTiledMap(
             [Option(Description = "Directory of Project")][DirectoryExists] string project
@@ -549,9 +492,9 @@ namespace Tiled2Dmap.CLI
                         bool isTrue = (mask8 & (1 << bitIdx)) != 0;
 
                         if (isTrue)
-                            maskBmp.SetPixel(x, y, Color.Black);
+                            maskBmp.SetPixel(x, y, System.Drawing.Color.Black);
                         else
-                            maskBmp.SetPixel(x, y, Color.White);
+                            maskBmp.SetPixel(x, y, System.Drawing.Color.White);
 
                     }
                 }

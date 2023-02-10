@@ -2,7 +2,7 @@
   "profiles": {
     "dmap2tiled": {
       "commandName": "Project",
-      "commandLineArgs": "dmap2tiled --project C:\\Temp\\comaps --client \"D:\\Games\\Conquer\\ConquerFuse\" --dmap map\\map\\occupy03.dmap"
+      "commandLineArgs": "dmap2tiled --project C:\\Temp\\comaps --client \"D:\\Programming\\Conquer\\Clients\\5579\" --dmap map\\map\\newplain.dmap -f"
     },
     "preview": {
       "commandName": "Project",
@@ -35,6 +35,10 @@
     "serialize": {
       "commandName": "Project",
       "commandLineArgs": "serialize \"C:\\Temp\\Serialize\\canyon.DMap\" \"C:\\Temp\\Serialize\" -x"
+    },
+    "stitchdmap": {
+      "commandName": "Project",
+      "commandLineArgs": "stitch-dmap --output \"C:\\Temp\\comaps\\newplain-is.png\" --client \"D:\\Programming\\Conquer\\Clients\\5579\" --dmap \"D:\\Programming\\Conquer\\Clients\\5579\\map\\map\\newplain.DMap\""
     }
   }
 }

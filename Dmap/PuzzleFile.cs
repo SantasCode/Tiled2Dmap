@@ -7,6 +7,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Tiled2Dmap.CLI.Extensions;
 using Tiled2Dmap.CLI.Utility;
+using SixLabors.ImageSharp.PixelFormats;
+using Tiled2Dmap.CLI.ImageServices;
 
 namespace Tiled2Dmap.CLI.Dmap
 {
@@ -122,9 +124,10 @@ namespace Tiled2Dmap.CLI.Dmap
                     ClientResources clientResources = new ClientResources(ClientPath);
                     Stream fileStream = clientResources.GetFile(file.Frames.Peek());
                     if (fileStream == null) continue;
-                    using System.Drawing.Bitmap bitmap = ImageServices.DDSConvert.StreamToPng(fileStream);
-                    width = bitmap.Width;
-                    return width;
+                    
+                    using SixLabors.ImageSharp.Image<Rgba32> image = DDSConvert.LoadImageSharp(fileStream);
+
+                    return image.Width;
                 }
                 catch(DirectoryNotFoundException dnfe){}
                 catch (FileNotFoundException fnfe){}
