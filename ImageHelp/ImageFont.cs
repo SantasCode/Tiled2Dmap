@@ -1,58 +1,101 @@
-﻿using System;
+﻿using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp;
+using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Cocona.ShellCompletion.Candidate;
+using Tiled2Dmap.CLI.ImageHelp;
+using Microsoft.Xna.Framework.Content;
 
 namespace Tiled2Dmap.CLI.ImageServices
 {
-    public static class ImageFont
+    internal class ImageFontIS
     {
-        public static void DrawBmpOnBmp(Bitmap src, Bitmap dst, int dstX, int dstY)
-        {
-            for (int x = 0; x < src.Width; x++)
-                for (int y = 0; y < src.Height; y++)
-                {
-                    Color src_px = src.GetPixel(x, y);
-                    dst.SetPixel(x+dstX, y+dstY, src_px);
-                }
+        private const int maxNumberWidth = 5;
+        private const int spaceCount = 1;//Number of pixels between each character.
+
+        private readonly Image<Rgba32> _fontImage;
+        private readonly Image<Rgba32> _negativeImage;
+        private readonly Size _characterSize;
+        private readonly List<int> _values;
+
+        public Size NumberSize { get; init; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="fontImage">Image containing font characters with a fixed width.</param>
+        internal ImageFontIS(Image<Rgba32> fontImage, Image<Rgba32> negativeImage, List<int> values, int numCharacters = 10) 
+        { 
+            _fontImage = fontImage;
+            _negativeImage = negativeImage;
+            _values = values;
+            _characterSize = new(_fontImage.Width / numCharacters, _fontImage.Height);
+
+            //Calculate the Number Image size;
+            int maxLength = _values.Max(x => x.ToString().Length);
+            int widthPx = (_characterSize.Width + spaceCount) * maxLength - spaceCount;
+
+            NumberSize = new(widthPx, _characterSize.Height);
         }
-        public static Size GetSize( int FixedLength)
+
+
+        internal Image<Rgba32> GetNumbersImage()
         {
-            return new Size((Resources.font_digit.Width / 10) * FixedLength + (FixedLength - 1), Resources.font_digit.Height);
-        }
-        public static Bitmap GetNumberBitmap(int Value, int FixedLength)
-        {
-            string Text = Value.ToString();
-            int stringLen = Text.Length;
+            int numValues = _values.Count();
 
-            if (stringLen > FixedLength)
-                throw new ArgumentOutOfRangeException("Value provided is longer than the fixed length provided");
+            int rows = 1;
+            int cols = numValues;
 
-            //Determine starting index to center number on fixed width.
-            int padding = FixedLength - stringLen;
-            int padLeft = (padding / 2 + padding % 2) * (Resources.font_digit.Width / 10);
-
-
-            Bitmap textBitmap = new Bitmap(GetSize( FixedLength).Width, GetSize( FixedLength).Height);//pixel font is monospace.
-            for (int idx = 0, xoffset = padLeft; idx < stringLen; idx++, xoffset += (Resources.font_digit.Width / 10)+1)//Add one to xoffset to put single spacing between chars.
+            if(numValues > maxNumberWidth)
             {
-                if (Text[idx] == '-')
+                rows = numValues / maxNumberWidth + 1;
+                cols = maxNumberWidth;
+            }
+
+            Image<Rgba32> image = new Image<Rgba32>(NumberSize.Width * cols, rows * _characterSize.Height);
+
+            //Copy the individual number images to the overall image.
+
+            //Keep track of the current numbers bounding rectangle.
+            var numberBounds = new Rectangle(0,0, NumberSize.Width, _characterSize.Height);
+
+            for(int i = 0; i < numValues; i++)
+            {
+                //Adjust the numberBounds rectangle
+                numberBounds.X = i % maxNumberWidth * NumberSize.Width;
+                numberBounds.Y = i / maxNumberWidth * _characterSize.Height;
+
+                string numbersText = _values[i].ToString();
+
+                //Determine tthe number of unused pixels to keep the text centered..
+                int numTotalLength = (_characterSize.Width + spaceCount) * numbersText.Length - spaceCount;
+                int totalPadding = NumberSize.Width - numTotalLength;
+                int leftPadding = totalPadding / 2;
+
+                //The characters location in image
+                Point characterLocation = new(numberBounds.X + leftPadding, numberBounds.Y);
+
+                for(int j = 0; j < numbersText.Length; j++)
                 {
-                    DrawBmpOnBmp(Resources.font_neg, textBitmap, xoffset, 0);
-                }
-                else
-                {
-                    int pixelFontOffset = (Text[idx] - 0x30) * (Resources.font_digit.Width / 10);
-                    using (Bitmap charBmp = Resources.font_digit.Clone(new Rectangle(pixelFontOffset, 0, Resources.font_digit.Width / 10, Resources.font_digit.Height), Resources.font_digit.PixelFormat))
+                    if (numbersText[j] == '-')
                     {
-                        DrawBmpOnBmp(charBmp, textBitmap, xoffset, 0);
+                        _negativeImage.CopyTo(new Rectangle(new(0, 0), _negativeImage.Size()), image, characterLocation);
                     }
+                    else
+                    { 
+                        int digitOffset = (numbersText[j] - 0x30) * _characterSize.Width;
+                        var digitBound = new Rectangle(new Point(digitOffset, 0), _characterSize);
+                        _fontImage.CopyTo(digitBound, image, characterLocation);
+
+                    }
+                    characterLocation.X += _characterSize.Width + spaceCount;
                 }
             }
 
-            return textBitmap;
+            return image;
         }
     }
 }

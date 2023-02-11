@@ -125,7 +125,7 @@ namespace Tiled2Dmap.CLI.Dmap
                     Stream fileStream = clientResources.GetFile(file.Frames.Peek());
                     if (fileStream == null) continue;
                     
-                    using SixLabors.ImageSharp.Image<Rgba32> image = DDSConvert.LoadImageSharp(fileStream);
+                    using SixLabors.ImageSharp.Image<Rgba32> image = DDSConvert.Load(fileStream);
 
                     return image.Width;
                 }

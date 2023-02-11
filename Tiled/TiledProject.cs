@@ -75,7 +75,8 @@ namespace Tiled2Dmap.CLI.Tiled
             tiledProject.AddDirectory(Path.Combine(tiledProject.ProjectDirectory, "tiled", "access"));
             //Save the portal image to the project directory.
             string accessImagePath = $"{Path.Combine(ProjectDirectory, "tiled", "access")}/access.png";
-            Resources.access_64x64.Save(accessImagePath);
+            var accessImage = EmbeddedResources.Access();
+            accessImage.SaveAsPng(accessImagePath);
 
             //Create the Access Tilset
 
@@ -85,8 +86,8 @@ namespace Tiled2Dmap.CLI.Tiled
                 TileWidth = 64,
                 TileHeight = 32,
                 Image = Path.GetRelativePath(Path.Combine(tiledProject.ProjectDirectory, "tiled","access"), accessImagePath),
-                ImageWidth = Resources.access_64x64.Width,
-                ImageHeight = Resources.access_64x64.Height
+                ImageWidth = accessImage.Width,
+                ImageHeight = accessImage.Height
             };
 
             //Save the portal tile set.
@@ -239,14 +240,15 @@ namespace Tiled2Dmap.CLI.Tiled
             tiledProject.AddDirectory(Path.Combine(tiledProject.ProjectDirectory, "tiled", "portal"));
             //Save the portal image to the project directory.
             string portalImagePath = $"{Path.Combine(ProjectDirectory, "tiled", "portal")}/portal1.png";
-            Resources.exit_128x64.Save(portalImagePath);
+            var portalImage = EmbeddedResources.Portal128();
+            portalImage.SaveAsPng(portalImagePath);
 
             //Create the portal tile set
             TileSetFile portalTileSet = new()
             {
                 Name = "ts_portal",
-                TileWidth = Resources.exit_128x64.Width,
-                TileHeight = Resources.exit_128x64.Height
+                TileWidth = portalImage.Width,
+                TileHeight = portalImage.Height
             };
 
             portalTileSet.Tiles.Add(new Tile()
@@ -280,8 +282,8 @@ namespace Tiled2Dmap.CLI.Tiled
                     Name = $"Portal_{portalIdx++}",
                     XPixels = (int)(portal.Position.X * Constants.DmapTileHeight),
                     YPixels = (int)(portal.Position.Y * Constants.DmapTileHeight),
-                    Width = Resources.exit_128x64.Width,
-                    Height = Resources.exit_128x64.Height,
+                    Width = portalImage.Width,
+                    Height = portalImage.Height,
                     GId = NextGlobalTileId
                 });
             }
@@ -401,7 +403,7 @@ namespace Tiled2Dmap.CLI.Tiled
                             string coverBmpPath = Path.Combine(coverProjDir, aniFrame);
                             Directory.CreateDirectory(Path.GetDirectoryName(coverBmpPath));
 
-                            using (Image<Rgba32> coverImage = DDSConvert.LoadImageSharp(ClientResources.GetFile(aniFrame)))
+                            using (Image<Rgba32> coverImage = DDSConvert.Load(ClientResources.GetFile(aniFrame)))
                             {
 
                                 //TOOD: Maintain original relative path
@@ -441,7 +443,7 @@ namespace Tiled2Dmap.CLI.Tiled
                         Directory.CreateDirectory(Path.GetDirectoryName(coverBmpPath));
 
                         //The tile is not animated.
-                        using (Image<Rgba32> coverImage = DDSConvert.LoadImageSharp(ClientResources.GetFile(coverAniRelPath)))
+                        using (Image<Rgba32> coverImage = DDSConvert.Load(ClientResources.GetFile(coverAniRelPath)))
                         {
                             //TOOD: Maintain original relative path
                             coverImage.Save(coverBmpPath);

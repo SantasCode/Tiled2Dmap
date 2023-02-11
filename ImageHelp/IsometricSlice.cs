@@ -45,23 +45,13 @@ namespace Tiled2Dmap.CLI.ImageHelp
             //Determine the size of tile needed. Some maps don't support using a 256x128 tile.
             if (image.Width % 256 == 0 && image.Height % 256 == 0)
             {
-                using (var ms = new MemoryStream())
-                {
-                    Resources.diamond_256x128.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
-                    ms.Seek(0, SeekOrigin.Begin);
-                    _tileMask = Image<Rgba32>.Load<Rgba32>(ms);
-                }
+                _tileMask = EmbeddedResources.Diamond256();
                 TileWidth = 256;
                 TileHeight = 128;
             }
             else if (image.Width % 128 == 0 && image.Height % 128 == 0)
             {
-                using (var ms = new MemoryStream())
-                {
-                    Resources.diamond_128x64.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
-                    ms.Seek(0, SeekOrigin.Begin);
-                    _tileMask = Image<Rgba32>.Load<Rgba32>(ms);
-                }
+                _tileMask = EmbeddedResources.Diamond128();
                 TileWidth = 128;
                 TileHeight = 64;
 
@@ -143,7 +133,7 @@ namespace Tiled2Dmap.CLI.ImageHelp
                     //We only care about this subimage is it covers the background backgroundImage.
                     if (subImageRect.IntersectsWith(backgroundRect))
                     {
-                        backgroundImage.SubImage(tileSubImage, new(subImageRect.X, subImageRect.Y));
+                        backgroundImage.Extract(tileSubImage, new(subImageRect.X, subImageRect.Y));
 
                         tileSubImage.Mutate(x =>
                         {

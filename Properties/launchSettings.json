@@ -2,7 +2,7 @@
   "profiles": {
     "dmap2tiled": {
       "commandName": "Project",
-      "commandLineArgs": "dmap2tiled --project C:\\Temp\\comaps --client \"D:\\Programming\\Conquer\\Clients\\5579\" --dmap map\\map\\newplain.dmap -f"
+      "commandLineArgs": "dmap2tiled --project C:\\Temp\\comaps --client \"D:\\Programming\\Conquer\\Clients\\5579\" --dmap map\\map\\arena.dmap -f"
     },
     "preview": {
       "commandName": "Project",
@@ -10,7 +10,7 @@
     },
     "tiled2dmap": {
       "commandName": "Project",
-      "commandLineArgs": "tiled2dmap --project C:\\Temp\\comaps --map-name occupy03_test"
+      "commandLineArgs": "tiled2dmap --project C:\\Temp\\comaps --map-name arena_test"
     },
     "test parse": {
       "commandName": "Project",

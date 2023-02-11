@@ -52,7 +52,7 @@ namespace Tiled2Dmap.CLI.ImageServices
                         Console.WriteLine($"Warning: More than one frame in puzzle piece {aniFile.AniFilePath} - Puzzle{puzzleId}. Only stitching first frame.");
 
                     string puzzlePiecePath = puzzlePieceFrames.Peek().Trim();
-                    using (Image<Rgba32> pieceImage = DDSConvert.LoadImageSharp(_clientResources.GetFile(puzzlePiecePath)))
+                    using (Image<Rgba32> pieceImage = DDSConvert.Load(_clientResources.GetFile(puzzlePiecePath)))
                     {
                         if (!sizeIsSet)
                         {

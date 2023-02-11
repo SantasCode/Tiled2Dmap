@@ -8,6 +8,8 @@ using Tiled2Dmap.CLI.Dmap;
 using System.Drawing;
 using ImageMagick;
 using System.IO;
+using Tiled2Dmap.CLI.ImageServices;
+using SixLabors.ImageSharp;
 
 namespace Tiled2Dmap.CLI.Tiled
 {
@@ -28,23 +30,26 @@ namespace Tiled2Dmap.CLI.Tiled
 
         public static TileSetFile TileSetFileTextImage(string Name, string OutputDirectory, Dictionary<int, int> Values)
         {
-            int maxStrLength = 0;
-            foreach(int key in Values.Keys) if (key.ToString().Length > maxStrLength) maxStrLength = key.ToString().Length;
+            var numbers = Values.Keys.ToList();
+            numbers.Sort();
 
-            Size TextImgSize = ImageServices.ImageFont.GetSize(maxStrLength);
+            ImageFontIS imageFontIS = new(EmbeddedResources.FontNumbers(), EmbeddedResources.FontNegative(), numbers);
 
-            int imgWidth = Values.Count >= 5 ? (5 * TextImgSize.Width) : (Values.Count * TextImgSize.Width);
-            int imgHeight = ((Values.Count / 5) + 1) * TextImgSize.Height;
-            string imgPath = $"{OutputDirectory}/{Name}.png";
+
+            var numberImage = imageFontIS.GetNumbersImage();
+
+            string imgPath = Path.Combine(OutputDirectory, $"{Name}.png");
+
+            numberImage.SaveAsPng(imgPath);
 
             TileSetFile tileSetFile = new()
             {
                 Name = $"ts_{Name}",
-                ImageWidth = imgWidth,
-                ImageHeight = imgHeight,
+                ImageWidth = numberImage.Width,
+                ImageHeight = numberImage.Height,
                 Image = Path.GetRelativePath(OutputDirectory, imgPath),
-                TileWidth = TextImgSize.Width,
-                TileHeight = TextImgSize.Height
+                TileWidth = imageFontIS.NumberSize.Width,
+                TileHeight = imageFontIS.NumberSize.Height
             };
             tileSetFile.TileOffset = new()
             {
@@ -54,40 +59,28 @@ namespace Tiled2Dmap.CLI.Tiled
 
 
             int bitmapIdx = 0;
-            using (Bitmap heightBitmap = new Bitmap(imgWidth, imgHeight))
+            foreach (var value in Values.OrderBy(k => k.Key).Select(k => k))
             {
-               // using (Graphics graphics = Graphics.FromImage(heightBitmap))
-              //  {
-                    foreach (var value in Values.OrderBy(k => k.Key).Select(k => k))
-                    {
-                        //Add a tile entry w/ properties.
-                        Tile tmpTile = new()
-                        {
-                            Id = bitmapIdx
-                        };
-                        tmpTile.Properties = new();
-                        tmpTile.Properties.Add(new()
-                        {
-                            Name = "Value",
-                            Value = value.Key,
-                            Type = "int"
-                        });
-                        tileSetFile.Tiles.Add(tmpTile);
+                //Add a tile entry w/ properties.
+                Tile tmpTile = new()
+                {
+                    Id = bitmapIdx
+                };
+                tmpTile.Properties = new();
+                tmpTile.Properties.Add(new()
+                {
+                    Name = "Value",
+                    Value = value.Key,
+                    Type = "int"
+                });
+                //Add tile to tile set.
+                tileSetFile.Tiles.Add(tmpTile);
 
-                        //Set the value to the bitmapIdx to reference in the layer data.
-                        Values[value.Key] = bitmapIdx;
+                //Set the value to the bitmapIdx to reference in the layer data.
+                Values[value.Key] = bitmapIdx;
 
-                        using Bitmap tmpBitmap = ImageServices.ImageFont.GetNumberBitmap(value.Key, maxStrLength);
-
-                        //Draw it to the main image.
-                        //graphics.DrawImage(tmpBitmap, (bitmapIdx % 5) * TextImgSize.Width, ((bitmapIdx / 5) * TextImgSize.Height));
-                        ImageServices.ImageFont.DrawBmpOnBmp(tmpBitmap, heightBitmap, (bitmapIdx % 5) * TextImgSize.Width, ((bitmapIdx / 5) * TextImgSize.Height));
-
-                        //Add tile to tile set.
-                        bitmapIdx++;
-                    }
-                //}
-                heightBitmap.Save(imgPath);
+                //Increase the tileset idx.
+                bitmapIdx++;
             }
             return tileSetFile;
         }

@@ -10,6 +10,7 @@ using System.Text.Json;
 using Tiled2Dmap.CLI.Attributes;
 using Tiled2Dmap.CLI.Dmap;
 using Tiled2Dmap.CLI.Extensions;
+using Tiled2Dmap.CLI.ImageServices;
 
 namespace Tiled2Dmap.CLI
 {
@@ -422,83 +423,6 @@ namespace Tiled2Dmap.CLI
                     Console.WriteLine($"Failed to load {file}");
                     Console.WriteLine(e.ToString());
                 }
-            }
-        }
-
-        [Command]
-        public void TestTiledMap(
-            [Option(Description = "Directory of Project")][DirectoryExists] string project
-            )
-        {
-            string fileName = new DirectoryInfo(project).Name;
-            string filePath = Path.Combine(project, $"{fileName}.json");
-            Tiled.TiledMapFile tiledMapFile = new()
-            {
-                WidthTiles = 12,
-                HeightTiles = 12,
-                TileWidth = 128,
-                TileHeight = 64
-            };
-            tiledMapFile.Layers.Add(new Tiled.TileLayer()
-            {
-                Name = "default",
-                WidthTiles = 12,
-                HeightTiles = 12
-            });
-            tiledMapFile.Layers.Add(new Tiled.ObjectLayer()
-            {
-                Name = "sounds"
-            });
-
-            JsonSerializerOptions jsOptions = new JsonSerializerOptions()
-            {
-                PropertyNamingPolicy = new Tiled.Json.LowerCaseNamingPolicy(),
-                WriteIndented = true
-            };
-            jsOptions.Converters.Add(new Tiled.Json.TiledLayerConverter());
-
-            string json = JsonSerializer.Serialize(tiledMapFile, jsOptions);
-
-            File.WriteAllText(filePath, json);
-
-            Console.WriteLine($"Wrote Tiled Map to {filePath}");
-        }
-
-        [Command]
-        public void TestGenerateTile()
-        {
-            using Bitmap bitmap = ImageServices.ImageFont.GetNumberBitmap(1234, 4);
-            bitmap.Save("C:/Temp/textFontpng.png");
-        }
-        [Command]
-        public void TestConvertMsk([FileExists]string FilePath)
-        {
-            byte[] data = File.ReadAllBytes(FilePath);
-            int width = (int)Math.Sqrt(data.Length * 8);
-            int height = width;
-            Log.Info($"Msk File loaded estimated size {width},{height}");
-
-            using (Bitmap maskBmp = new(width, height))
-            {
-                for(int x = 0; x < width; x++)
-                {
-                    for(int y= 0; y < height; y++)
-                    {
-                        int idx = x + y * width;
-                        int byteIdx = idx / 8;
-                        byte mask8 = data[byteIdx];
-                        int bitIdx = idx % 8;
-
-                        bool isTrue = (mask8 & (1 << bitIdx)) != 0;
-
-                        if (isTrue)
-                            maskBmp.SetPixel(x, y, System.Drawing.Color.Black);
-                        else
-                            maskBmp.SetPixel(x, y, System.Drawing.Color.White);
-
-                    }
-                }
-                maskBmp.Save($"C:/Temp/{Path.GetFileNameWithoutExtension(FilePath)}.png");
             }
         }
     }

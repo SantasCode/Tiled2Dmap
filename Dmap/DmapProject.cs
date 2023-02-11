@@ -363,10 +363,13 @@ namespace Tiled2Dmap.CLI.Dmap
                             _logger.LogWarning("Cover file doesn't exist {0}", Path.Combine(TiledDirectory, tiledcoverpath));
                             continue;
                         }
+
                         string coverfullPath = Path.Combine(DmapDirectory, coverpath);
                         string dirName = Path.GetDirectoryName(coverfullPath);
+
                         Directory.CreateDirectory(Path.GetDirectoryName(coverfullPath));
-                        ImageServices.DDSConvert.PngToDDS(Path.Combine(TiledDirectory, tiledcoverpath), coverfullPath);
+
+                        Image.Load<Rgba32>(Path.Combine(TiledDirectory, tiledcoverpath)).SaveAsDDS(File.OpenWrite(coverfullPath));
                     }    
                 }
                 //Save the ani
@@ -519,7 +522,7 @@ namespace Tiled2Dmap.CLI.Dmap
 
                     string imgPath = (tile as Tiled.Tile).Image;
 
-                    using var puzzlePiece = Image.Load(imgPath);
+                    using var puzzlePiece = Image.Load<Rgba32>(Path.Combine(TiledDirectory, imgPath));
 
                     //(Iso X world origin + tile offset - tildwidth offset)
                     int wx = (puzzleLayer.WidthTiles * tileSize.Width / 2) + ((xidx - yidx) * tileSize.Width / 2) - tileSize.Width / 2;
@@ -541,6 +544,8 @@ namespace Tiled2Dmap.CLI.Dmap
 
             _logger.LogInformation("Stitching Puzzle File completed in {0} seconds",sw1.Elapsed.TotalSeconds);
             #endregion Isometric Stitch
+
+            backgroundImageIS.SaveAsPng("C:/Temp/comaps/stitches.png");
 
             //Slice all puzzle pieces to be 256. I don't see a reason to continue to support 128.
             int puzzleSize = 256;
@@ -592,7 +597,7 @@ namespace Tiled2Dmap.CLI.Dmap
             expectedSlicedTiles = (int)puzzleFile.Size.Width * (int)puzzleFile.Size.Height;
             Utility.ProgressBar sliceProgress = new(expectedSlicedTiles, 10);
 
-            using SixLabors.ImageSharp.Image<Rgba32> puzzleSlice = new(puzzleTileSize.Width, puzzleTileSize.Height);
+            using Image<Rgba32> puzzleSlice = new(puzzleTileSize.Width, puzzleTileSize.Height);
             
             _logger.LogInformation("Slicing Puzzle File...{0:000}%", sliceProgress.Progress);
             sw1 = Stopwatch.StartNew();
@@ -603,14 +608,14 @@ namespace Tiled2Dmap.CLI.Dmap
             {
                 for(int xidx = 0; xidx < puzzleFile.Size.Width; xidx++)
                 {
-                    backgroundImageIS.SubImage(puzzleSlice, new(xidx * puzzleTileSize.Width, yidx * puzzleTileSize.Height));
+                    backgroundImageIS.Extract(puzzleSlice, new(xidx * puzzleTileSize.Width, yidx * puzzleTileSize.Height));
 
                     string hash = ImageHash.GetImageHash(puzzleSlice);
                     int thisIdx = 0;
                     if(!imgHashMap.TryGetValue(hash, out thisIdx))
                     {
                         thisIdx = puzzleIdx++;
-                        imgHashMap.Add(hash, thisIdx);
+                        //imgHashMap.Add(hash, thisIdx);
 
                         Ani tmpAni = new();
                         tmpAni.Name = $"Puzzle{thisIdx}";
@@ -618,7 +623,7 @@ namespace Tiled2Dmap.CLI.Dmap
                         tmpAni.Frames.Enqueue(relativeFramePath);
 
                         //Convert and save dds to anipath.
-                        DDSConvert.SaveDds(puzzleSlice, File.OpenWrite(Path.Combine(DmapDirectory, relativeFramePath)));
+                        puzzleSlice.SaveAsDDS(File.OpenWrite(Path.Combine(DmapDirectory, relativeFramePath)));
 
                         aniFile.Anis.Add(tmpAni.Name, tmpAni);
                     }
