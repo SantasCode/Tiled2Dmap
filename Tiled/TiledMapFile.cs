@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using ImageMagick;
 using System.Text.Json.Serialization;
-using Tiled2Dmap.CLI.Dmap;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
