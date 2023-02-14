@@ -17,7 +17,7 @@ namespace Tiled2Dmap.CLI.Tiled
         public int Height { get; set; }
         public string Name { get; set; }
         public List<TiledProperty> Properties { get; set; }
-        public abstract string Type { get; set; }
+        public abstract string Class { get; set; }
     }
     public class EffectObject : TiledObject
     {
@@ -36,12 +36,12 @@ namespace Tiled2Dmap.CLI.Tiled
             };
         }
 
-        public override string Type { get; set; } = "effect";
+        public override string Class { get; set; } = "effect";
     }
     public class PortalObject : TiledObject
     {
         public int GId { get; set; }
-        public override string Type { get; set; } = "portal";
+        public override string Class { get; set; } = "portal";
         public PortalObject() { }
         public PortalObject(uint PortalId)
         {
@@ -85,12 +85,12 @@ namespace Tiled2Dmap.CLI.Tiled
             };
         }
 
-        public override string Type { get; set; } = "sound";
+        public override string Class { get; set; } = "sound";
     }
     public class CoverObject : TiledObject
     {
         public int GId { get; set; }
-        public override string Type { get; set; } = "cover";
+        public override string Class { get; set; } = "cover";
 
         public CoverObject() { }
         public CoverObject(uint BaseWidth, uint BaseHeight)

@@ -14,7 +14,7 @@ namespace Tiled2Dmap.CLI.Tiled.Json
         {
             if (JsonDocument.TryParseValue(ref reader, out var doc))
             {
-                if (doc.RootElement.TryGetProperty("type", out var type))
+                if (doc.RootElement.TryGetProperty("class", out var type))
                 {
                     var typeValue = type.GetString();
                     var rootElement = doc.RootElement.GetRawText();
@@ -37,13 +37,13 @@ namespace Tiled2Dmap.CLI.Tiled.Json
 
         public override void Write(Utf8JsonWriter writer, TiledObject value, JsonSerializerOptions options)
         {
-            switch (value.Type)
+            switch (value.Class)
             {
                 case "sound": JsonSerializer.Serialize(writer, value as SoundObject, typeof(SoundObject), options); break;
                 case "effect": JsonSerializer.Serialize(writer, value as EffectObject, typeof(EffectObject), options); break;
                 case "cover": JsonSerializer.Serialize(writer, value as CoverObject, typeof(CoverObject), options); break;
                 case "portal": JsonSerializer.Serialize(writer, value as PortalObject, typeof(PortalObject), options); break;
-                default: throw new JsonException($"{value.Type} has not been mapped to a custom type yet!");
+                default: throw new JsonException($"{value.Class} has not been mapped to a custom type yet!");
             }
         }
     }

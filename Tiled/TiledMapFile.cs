@@ -26,7 +26,7 @@ namespace Tiled2Dmap.CLI.Tiled
         public bool Infinite { get; set; } = false;
         public string Orientation { get; set; } = "isometric";
         public string RenderOrder { get; set; } = "right-down";
-        public string TiledVersion { get; set; } = "1.7.2";
+        public string TiledVersion { get; set; } = "1.9";
         public string Type { get; init; } = "map";
         #endregion
 
