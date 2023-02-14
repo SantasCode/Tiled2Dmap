@@ -104,9 +104,9 @@ namespace Tiled2Dmap.CLI.Dmap
             {
                 foreach(var portal in portalLayer.Objects)
                 {
-                    if(portal.Type != "portal")
+                    if(portal.Class != "portal")
                     {
-                        _logger.LogWarning("Invalid object type in the portal object group: {0}", portal.Type);
+                        _logger.LogWarning("Invalid object type in the portal object group: {0}", portal.Class);
                         continue;
                     }
                     if(portal.Properties == null)
@@ -140,9 +140,9 @@ namespace Tiled2Dmap.CLI.Dmap
             {
                 foreach(var effect in effectLayer.Objects)
                 {
-                    if (effect.Type != "effect")
+                    if (effect.Class != "effect")
                     {
-                        _logger.LogWarning("Invalid object type in the effect object group: {0}", effect.Type);
+                        _logger.LogWarning("Invalid object type in the effect object group: {0}", effect.Class);
                         continue;
                     }
                     if (effect.Properties == null)
@@ -175,9 +175,9 @@ namespace Tiled2Dmap.CLI.Dmap
             {
                 foreach (var sound in soundLayer.Objects)
                 {
-                    if (sound.Type != "sound")
+                    if (sound.Class != "sound")
                     {
-                        _logger.LogWarning($"Invalid object type in the sound object group {0}", sound.Type);
+                        _logger.LogWarning($"Invalid object type in the sound object group {0}", sound.Class);
                         continue;
                     }
                     if (sound.Properties == null)
@@ -218,9 +218,9 @@ namespace Tiled2Dmap.CLI.Dmap
             {
                 foreach (var cover in coverLayer.Objects)
                 {
-                    if (cover.Type != "cover")
+                    if (cover.Class != "cover")
                     {
-                        _logger.LogWarning("Invalid object type in the cover object group: {0}", cover.Type);
+                        _logger.LogWarning("Invalid object type in the cover object group: {0}", cover.Class);
                         continue;
                     }
                     if (cover.Properties == null)
