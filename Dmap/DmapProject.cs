@@ -422,7 +422,7 @@ namespace Tiled2Dmap.CLI.Dmap
             else
                 bottom = mapPixelHeight / 2 + topDelta;
 
-            return new(left, top, right - left, bottom - top);
+            return new(left, top, (right - left) - tileSize.Width, bottom - top);
         }
 
         private Size GetPuzzleSizeAdder(Size mapSize, Size tileSize, int puzzlePieceSize)

@@ -2,7 +2,7 @@
   "profiles": {
     "dmap2tiled": {
       "commandName": "Project",
-      "commandLineArgs": "dmap2tiled --project C:\\Temp\\comaps --client \"D:\\Programming\\Conquer\\Clients\\5579\" --dmap map\\map\\arena.dmap -f"
+      "commandLineArgs": "dmap2tiled --project C:\\Temp\\comaps --client \"D:\\Games\\Conquer\\ConquerFuse\" --dmap map\\map\\occupy03.dmap -f"
     },
     "preview": {
       "commandName": "Project",
