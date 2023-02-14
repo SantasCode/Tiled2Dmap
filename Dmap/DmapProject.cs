@@ -482,7 +482,6 @@ namespace Tiled2Dmap.CLI.Dmap
             Size extendedBackgroundSize = boundingRect.Size;
 
             //Add an extended border around the background, of an additional tile.
-            extendedBackgroundSize += tileSize;
 
             Point puzzleOffset = boundingRect.Location;
 
@@ -527,8 +526,8 @@ namespace Tiled2Dmap.CLI.Dmap
                     //(Iso X world origin + tile offset - tildwidth offset)
                     int wx = (puzzleLayer.WidthTiles * tileSize.Width / 2) + ((xidx - yidx) * tileSize.Width / 2) - tileSize.Width / 2;
                     int wy = (xidx + yidx) * tileSize.Height / 2;
-                    int px = wx - puzzleOffset.X + tileSize.Width / 2; //World to Puzzle + offset for extended border.
-                    int py = wy - puzzleOffset.Y + tileSize.Height / 2;//World to Puzzle + offset for extended border.
+                    int px = wx - puzzleOffset.X - tileSize.Width / 2; //World to Puzzle + offset for extended border.
+                    int py = wy - puzzleOffset.Y;//World to Puzzle + offset for extended border.
 
                     backgroundImageIS.Mutate(x =>
                     {
@@ -557,6 +556,7 @@ namespace Tiled2Dmap.CLI.Dmap
                 //Need to crop the image.
                 backgroundImageIS.Mutate(x =>
                 {
+                    sizeAdder *= -1;
                     x.Crop(new(sizeAdder.Width / 2, sizeAdder.Height / 2, backgroundImageIS.Width - sizeAdder.Width, backgroundImageIS.Height - sizeAdder.Height));
                 });
             }
