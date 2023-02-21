@@ -544,8 +544,6 @@ namespace Tiled2Dmap.CLI.Dmap
             _logger.LogInformation("Stitching Puzzle File completed in {0} seconds",sw1.Elapsed.TotalSeconds);
             #endregion Isometric Stitch
 
-            backgroundImageIS.SaveAsPng("C:/Temp/comaps/stitches.png");
-
             //Slice all puzzle pieces to be 256. I don't see a reason to continue to support 128.
             int puzzleSize = 256;
 
