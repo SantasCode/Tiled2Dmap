@@ -6,14 +6,6 @@ Project that convert Conquer Online game maps to and from a [Tiled](https://www.
 
 This CLI utility converts Conquer Online game maps to a format that can be easily modified by an existing, well established, map editor. In theory you can edit any existing map, save for a few unsupported map objects (scenes and additional puzzle layers). You can also create new maps from new or existing resources. 
 
-### Todo
- - [ ] Support Scene
-- [ ] Support Additional Layers (skies..)
-- [ ] Clean up/standardize command arguments/options
-- [ ] Improve new-project command
-- [ ] Program preferences (for 7z path)
-- [ ] Add more todos
-
 ## Getting Started
 
 ### Usage
@@ -133,7 +125,7 @@ Options:
 * 7-zip
 * [BCnEncoder.Net.ImageSharp](https://github.com/Nominom/BCnEncoder.NET)
 * [Cocona](https://github.com/mayuki/Cocona)
-* [Magick.NET](https://github.com/dlemstra/Magick.NET)
+* [ImageSharp](https://github.com/SixLabors/ImageSharp)
 * [MonoGame](https://www.monogame.net/)
 * [Squid-Box.SevenZipSharp](https://github.com/squid-box/SevenZipSharp)
 
