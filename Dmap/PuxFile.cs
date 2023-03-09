@@ -157,7 +157,7 @@ namespace Tiled2Dmap.CLI.Dmap
                 for (int i = 0; i < numEdgeData; i++)
                 {
                     uint unk = br.ReadUInt32();
-                    byte[] unkBytes = br.ReadBytes(4);
+                    byte[] unkBytes = br.ReadBytes(4);//Read as four individuals bytes. Left,Top,Right,  Down  perhaps?
                 }
                 Log.Info("Finished reading pux");
             }
