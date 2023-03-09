@@ -99,7 +99,7 @@ namespace Tiled2Dmap.CLI.Dmap
                 ushort numEdgeGroups = br.ReadUInt16();
                 for (int i = 0; i < numEdgeGroups; i++)
                 {
-                    byte[] unkBytes = br.ReadBytes(br.ReadUInt16());
+                    byte[] unkBytes = br.ReadBytes(br.ReadUInt16()); //A string in simplified chinese. Appears to be unused in client.
 
                     string aniFile = br.ReadASCIIString(br.ReadUInt16());
 
