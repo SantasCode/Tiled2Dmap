@@ -8,7 +8,7 @@ namespace Tiled2Dmap.CLI.Dmap.Pux
 {
     public readonly struct TextureGroup
     {
-        public byte[] UnknownBytes { get; init; }
+        public byte[] UnknownBytes { get; init; }//Simplified chinese string, appears unused in client.
         public string  AniFile { get; init; }
         public string AniName { get; init; }
         public uint unk1 { get; init; }

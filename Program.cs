@@ -60,12 +60,25 @@ namespace Tiled2Dmap.CLI
             DmapExtract dmapExtract = new DmapExtract(new Utility.ClientResources(clientPath), new DmapFile(dmapPath, clientPath), dmapName);
             dmapExtract.Extract(outDir);
         }
+        [Command("extract-raw")]
+        public void ExtractRaw(
+       [Argument("output", Description = "Output Directory")][DirectoryExists] string outputDir,
+       [Argument("dmap", Description = "Path to Dmap File")] string dmapPath,
+       [Argument("client", Description = "Directory of client resources")][DirectoryExists] string clientPath
+       )
+        {
+            if (Path.IsPathFullyQualified(dmapPath)) 
+                dmapPath = Path.GetRelativePath(clientPath, dmapPath);
+
+            new DmapExtractRaw(ConsoleAppLogger.CreateLogger<DmapExtractRaw>(), new Utility.ClientResources(clientPath), dmapPath, outputDir);
+        }
         [Command("install")]
         public void Install(
             [Argument("project", Description = "Project Directory")][DirectoryExists] string inputDir,
             [Argument("mapId", Description = "New Map Id")] ushort mapId,
             [Argument("client", Description = "Client root directory to install")][DirectoryExists] string outputDir,
-            [Option("puzzleSize", Description = "Size in pixels of puzzle pieces")] ushort puzzleSize = 256
+            [Option("puzzleSize", Description = "Size in pixels of puzzle pieces")] ushort puzzleSize = 256,
+            [Option('r', Description = "Weather or not this should replace an existing mapId")]bool replace = false
             )
         {
             string gameMapDat = Path.Combine(outputDir, "ini\\GameMap.dat");
@@ -84,7 +97,8 @@ namespace Tiled2Dmap.CLI
             }
 
             GameMapDat.GameMapDatFile mapDat = new GameMapDat.GameMapDatFile(gameMapDat);
-            if(!mapDat.TryAdd(mapId, relativeDmapPath, puzzleSize))
+
+            if(!mapDat.TryAdd(mapId, relativeDmapPath, puzzleSize, replace))
                 return;
 
 

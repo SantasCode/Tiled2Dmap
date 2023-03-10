@@ -22,7 +22,7 @@
     },
     "install": {
       "commandName": "Project",
-      "commandLineArgs": "install \"C:\\Temp\\euArena\" 11001 \"D:\\Programming\\Conquer\\Clients\\6216\""
+      "commandLineArgs": "install \"C:\\Temp\\testExtract\" 1002 \"D:\\Games\\Conquer\\ConquerFuse\" -r"
     },
     "test-parse-scene": {
       "commandName": "Project",
@@ -39,6 +39,10 @@
     "stitchdmap": {
       "commandName": "Project",
       "commandLineArgs": "stitch-dmap --output \"C:\\Temp\\comaps\\newplain-is.png\" --client \"D:\\Programming\\Conquer\\Clients\\5579\" --dmap \"D:\\Programming\\Conquer\\Clients\\5579\\map\\map\\newplain.DMap\""
+    },
+    "extract-raw": {
+      "commandName": "Project",
+      "commandLineArgs": "extract-raw \"C:\\Temp\\testExtract\" \"map/map/faction_new.7z\" \"C:\\Program Files (x86)\\Conquer Online\\Conquer Online 3.0\""
     }
   }
 }

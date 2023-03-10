@@ -12,5 +12,7 @@ namespace Tiled2Dmap.CLI.Dmap
         public Utility.PixelPosition MoveRate { get; set; }
         public List<TerrainScene> TerrainScenes { get; set; } = new();
         public List<string> Puzzles { get; set; } =new();
+        public List<Effect> Effects { get; set; } = new();
+        public List<EffectNew> EffectNews { get; set; } = new();
     }
 }

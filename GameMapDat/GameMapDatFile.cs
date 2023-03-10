@@ -71,8 +71,11 @@ namespace Tiled2Dmap.CLI.GameMapDat
                 }
             }
         }
-        internal bool TryAdd(uint mapId, string path, uint size)
+        internal bool TryAdd(uint mapId, string path, uint size, bool replace = false)
         {
+            if (replace)
+                _mapCollection.Remove(mapId);
+
             if (_mapCollection.ContainsKey(mapId))
             {
                 Log.Error("MapId already taken");

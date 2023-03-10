@@ -64,31 +64,21 @@ namespace Tiled2Dmap.CLI.Dmap
                 ushort numTextureGroups = br.ReadUInt16();
                 for (int i = 0; i < numTextureGroups; i++)
                 {
-                    byte[] unkBytes = br.ReadBytes(br.ReadUInt16());
-
-                    string aniFile = br.ReadASCIIString(br.ReadUInt16());
-
-                    string puzPiece = br.ReadASCIIString(br.ReadUInt16());
-
-                    uint unk6 = br.ReadUInt32();
-                    uint unk7 = br.ReadUInt32();
-                    uint unk8 = br.ReadUInt32();
-                    uint unk9 = br.ReadUInt32();
-                    uint max = br.ReadUInt32();
+                    var textureGroup = new TextureGroup()
+                    {
+                        UnknownBytes = br.ReadBytes(br.ReadUInt16()),
+                        AniFile = br.ReadASCIIString(br.ReadUInt16()),
+                        AniName = br.ReadASCIIString(br.ReadUInt16()),
+                        unk1 = br.ReadUInt32(),
+                        unk2 = br.ReadUInt32(),
+                        unk3 = br.ReadUInt32(),
+                        unk4 = br.ReadUInt32(),
+                        Max = br.ReadUInt32()
+                    };
 
                     //Determine puzzleId
-                    int puzzleId = int.Parse(Regex.Match(puzPiece, @"\d+").Value);
-                    TextureGroups.Add(puzzleId, new()
-                    {
-                        UnknownBytes = unkBytes,
-                        AniFile = aniFile,
-                        AniName = puzPiece,
-                        unk1 = unk6,
-                        unk2 = unk7,
-                        unk3 = unk8,
-                        unk4 = unk9,
-                        Max = max
-                    });
+                    int puzzleId = int.Parse(Regex.Match(textureGroup.AniName, @"\d+").Value);
+                    TextureGroups.Add(puzzleId, textureGroup);
                     //wr.WriteLine("Texture Group: {0} AniFile: {1}, PuzzleEntry: {2}, {3}, {4}, {5}, {6}, {7}", unkBytes.GetString(), aniFile, puzPiece, unk6, unk7, unk8, unk9, max);
 
                 }
@@ -99,31 +89,21 @@ namespace Tiled2Dmap.CLI.Dmap
                 ushort numEdgeGroups = br.ReadUInt16();
                 for (int i = 0; i < numEdgeGroups; i++)
                 {
-                    byte[] unkBytes = br.ReadBytes(br.ReadUInt16()); //A string in simplified chinese. Appears to be unused in client.
-
-                    string aniFile = br.ReadASCIIString(br.ReadUInt16());
-
-                    string puzPiece = br.ReadASCIIString(br.ReadUInt16());
-
-                    uint unk6 = br.ReadUInt32();
-                    uint unk7 = br.ReadUInt32();
-                    uint unk8 = br.ReadUInt32();
-                    uint unk9 = br.ReadUInt32();
-                    uint max = br.ReadUInt32();
+                    var edgeGroup = new TextureGroup()
+                    {
+                        UnknownBytes = br.ReadBytes(br.ReadUInt16()), 
+                        AniFile = br.ReadASCIIString(br.ReadUInt16()),
+                        AniName = br.ReadASCIIString(br.ReadUInt16()),
+                        unk1 = br.ReadUInt32(),
+                        unk2 = br.ReadUInt32(),
+                        unk3 = br.ReadUInt32(),
+                        unk4 = br.ReadUInt32(),
+                        Max = br.ReadUInt32()
+                    };
 
                     //Determine puzzleId
-                    int puzzleId = int.Parse(Regex.Match(puzPiece, @"\d+").Value);
-                    EdgeGroups.Add(puzzleId, new()
-                    {
-                        UnknownBytes = unkBytes,
-                        AniFile = aniFile,
-                        AniName = puzPiece,
-                        unk1 = unk6,
-                        unk2 = unk7,
-                        unk3 = unk8,
-                        unk4 = unk9,
-                        Max = max
-                    });
+                    int puzzleId = int.Parse(Regex.Match(edgeGroup.AniName, @"\d+").Value);
+                    EdgeGroups.Add(puzzleId, edgeGroup);
                     //wr.WriteLine("Edge Group: {0} AniFile: {1}, PuzzleEntry: {2}, {3}, {4}, {5}, {6}, {7}", unkBytes.GetString(), aniFile, puzPiece, unk6, unk7, unk8, unk9, max);
                 }
                 //End LoadEdgeGroup

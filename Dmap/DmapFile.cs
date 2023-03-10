@@ -18,7 +18,8 @@ namespace Tiled2Dmap.CLI.Dmap
         public byte[] Header { get; set; }
         public uint MapVersion { get; set; }
         public bool IsNew { get { return DmapPath.ToLower().Contains("_new"); } }
-        public string PuzzleFile { get; set; }
+        public string? PuzzleFile { get; set; }
+        public string? PuxFile { get; set; }
         /// <summary>
         /// Size of the map in accessible tiles.
         /// </summary>
@@ -31,6 +32,9 @@ namespace Tiled2Dmap.CLI.Dmap
         public List<Effect> Effects { get; set; } = new();
         public List<Sound> Sounds { get; set; } = new();
         public List<SceneLayer> SceneLayers { get; set; } = new();
+        public List<EffectNew> EffectNews { get; set; } = new();
+        public List<Unknown1> Unknown1Objs { get; set; } = new();
+        public List<Unknown2> Unknown2Objs { get; set; } = new();
 
         public DmapFile() { }
         /// <summary>
@@ -86,9 +90,12 @@ namespace Tiled2Dmap.CLI.Dmap
                 if (headerStr.StartsWith("DMAP"))
                     this.MapVersion = 101;
 
-                this.PuzzleFile = br.ReadASCIIString(260);
+                string puzzleFile = br.ReadASCIIString(260);
+                
+                if (puzzleFile.EndsWith("pux")) PuxFile = puzzleFile;
+                else PuzzleFile = puzzleFile;
 
-                if ((PuzzleFile.ToLower()).EndsWith("pux")) throw new Exception("PUX file not supported");
+                //if ((PuzzleFile.ToLower()).EndsWith("pux")) throw new Exception("PUX file not supported");
 
                 this.SizeTiles = br.ReadSize();
                 this.TileSet = new Tile[this.SizeTiles.Width, this.SizeTiles.Height];
@@ -143,6 +150,7 @@ namespace Tiled2Dmap.CLI.Dmap
                                     Offset = br.ReadPixelPosition(),
                                     AnimationInterval = br.ReadUInt32()
                                 };
+                                Covers.Add(coverItem);
                                 uint unk = br.ReadUInt32();
                                 //Log.Info($"CoverItem: {coverItem.AniPath}-{coverItem.AniName}");
                                 break;
@@ -207,34 +215,45 @@ namespace Tiled2Dmap.CLI.Dmap
                                 _ = br.ReadUInt32(); //Interval.
                             break;
                         case MapObjectType.EffectNew:
-                            _ = br.ReadASCIIString(60);
-                            _ = br.ReadUInt64();
-                            _ = br.ReadUInt32();
-                            _ = br.ReadUInt32();
-                            _ = br.ReadUInt32();
-                            _ = br.ReadUInt32();
-                            _ = br.ReadUInt32();
-                            _ = br.ReadUInt32();
-                            _ = br.ReadUInt32();
+                            EffectNews.Add(new()
+                            {
+                                EffectName = br.ReadASCIIString(60),
+                                Position = br.ReadPixelPosition(),
+                                Unk1_u32 = br.ReadUInt32(),
+                                Unk2_u32 = br.ReadUInt32(),
+                                Unk3_u32 = br.ReadUInt32(),
+                                Unk4_u32 = br.ReadUInt32(),
+                                Unk5_u32 = br.ReadUInt32(),
+                                Unk6_u32 = br.ReadUInt32(),
+                                Unk7_u32 = br.ReadUInt32()
+
+                            });
                             break;
                         case MapObjectType.Unknown1:
-                            _ = br.ReadASCIIString(260);
-                            _ = br.ReadASCIIString(128);
-                            _ = br.ReadInt16();
-                            _ = br.ReadInt16();
-                            _ = br.ReadInt32();
-                            _ = br.ReadInt32();
-                            _ = br.ReadInt32();
-                            _ = br.ReadInt32();
-                            _ = br.ReadInt32();
-                            _ = br.ReadInt32();
-                            _ = br.ReadInt32();
-                            _ = br.ReadInt32();
+                            Unknown1Objs.Add(new()
+                            {
+                                AniFile = br.ReadASCIIString(260),
+                                AniName = br.ReadASCIIString(128),
+                                Unk0_i16 = br.ReadInt16(),
+                                Unk1_i16 = br.ReadInt16(),
+                                Unk2_i32 = br.ReadInt32(),
+                                Unk3_i32 = br.ReadInt32(),
+                                Unk4_i32 = br.ReadInt32(),
+                                Unk5_i32 = br.ReadInt32(),
+                                Unk6_i32 = br.ReadInt32(),
+                                Unk7_i32 = br.ReadInt32(),
+                                Unk8_i32 = br.ReadInt32(),
+                                Unk9_i32 = br.ReadInt32()
+                            });
                             break;
                         case MapObjectType.Unknown2:
-                            _ = br.ReadASCIIString(260);
-                            _ = br.ReadUInt32();
-                            _ = br.ReadTilePosition();
+                            Unknown2Objs.Add(new()
+                            {
+                                Name = br.ReadASCIIString(260),
+                                Unk0_u32 = br.ReadUInt32(),
+                                Position = br.ReadTilePosition()
+
+                            });
                             break;
                         default:
                             Log.Warn($"Unknown map object type: 0x{objType:X2}");
@@ -290,25 +309,26 @@ namespace Tiled2Dmap.CLI.Dmap
                                         sceneLayer.Puzzles.Add(br.ReadASCIIString(260));
                                         break;
                                     case MapObjectType.Effect:
-                                        this.Effects.Add(new Effect()
+                                        sceneLayer.Effects.Add(new Effect()
                                         {
                                             EffectName = br.ReadASCIIString(64),
                                             Position = br.ReadPixelPosition()
                                         });
                                         break;
                                     case MapObjectType.EffectNew:
-                                        string name = br.ReadASCIIString(60);
-                                        var unk10 = br.ReadPixelPosition();
-                                        uint unk11 = br.ReadUInt32();
-                                        uint unk12 = br.ReadUInt32();
-                                        uint unk13 = br.ReadUInt32();
-                                        uint unk14 = br.ReadUInt32();
-                                        uint unk15 = br.ReadUInt32();
-                                        uint unk16 = br.ReadUInt32();
-                                        //if (BitConverter.ToUInt32(this.Header, 0) == 0x3ee)
-                                        //{
-                                        uint unk8 = br.ReadUInt32();
-                                        //}
+                                        sceneLayer.EffectNews.Add(new()
+                                        {
+                                            EffectName = br.ReadASCIIString(60),
+                                            Position = br.ReadPixelPosition(),
+                                            Unk1_u32 = br.ReadUInt32(),
+                                            Unk2_u32 = br.ReadUInt32(),
+                                            Unk3_u32 = br.ReadUInt32(),
+                                            Unk4_u32 = br.ReadUInt32(),
+                                            Unk5_u32 = br.ReadUInt32(),
+                                            Unk6_u32 = br.ReadUInt32(),
+                                            Unk7_u32 = br.ReadUInt32()
+
+                                        });
                                         break;
                                     default: Log.Warn($"Unsupport Additional Layer Map Object {objType}"); break;
                                 }
