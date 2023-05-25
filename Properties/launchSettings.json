@@ -39,6 +39,10 @@
     "stitchdmap": {
       "commandName": "Project",
       "commandLineArgs": "stitch-dmap --output \"C:\\Temp\\comaps\\newplain-is.png\" --client \"D:\\Programming\\Conquer\\Clients\\5579\" --dmap \"D:\\Programming\\Conquer\\Clients\\5579\\map\\map\\newplain.DMap\""
+    },
+    "image2tiled": {
+      "commandName": "Project",
+      "commandLineArgs": "image2tiled \"D:\\Temp\\ImageMap\" \"D:\\Temp\\testMapImage.png\""
     }
   }
 }

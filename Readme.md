@@ -10,7 +10,7 @@ This CLI utility converts Conquer Online game maps to a format that can be easil
 
 ### Usage
 #### 7-zip Path
-Program.cs line 17 needs to be updated to point to 7z.dll
+Program.cs line 16 needs to be updated to point to 7z.dll
 #### dmap2tiled
 > Converts a Conquer Online game map to a tiled project
 ``` bat
@@ -34,6 +34,16 @@ Options:
   * `--map-name <String>`    Name of the map (Required)
   * `-h, --help`             Show help message
 
+#### image2tiled
+> Experimental: Converts a give image to a tiled project
+``` bat
+image2tiled [project <String>] [image <String>]
+```
+Options:
+  * `project <String>`       Directory of Project (Required)
+  * `client <String>`        Directory of client resources (Required)
+  * `-h, --help`               Show help message
+  
 #### Preview
 >Displays a specific Conquer online game map
 ``` bat
